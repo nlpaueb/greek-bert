@@ -28,7 +28,7 @@ Future release will also include:
 
 ## Requirements
 
-We published `bert-base-greek-uncased-v1` as part of [Hugging Face](https://huggingface.co)'s [Transformers](https://github.com/huggingface/transformers) repository. So, you need to install transfomers library through pip along with PyTorch or Tensorflow 2.
+We published `bert-base-greek-uncased-v1` as part of [Hugging Face](https://huggingface.co)'s [Transformers](https://github.com/huggingface/transformers) repository. So, you need to install the transfomers library through pip along with PyTorch or Tensorflow 2.
 
 ```
 pip install unicodedata
@@ -38,7 +38,7 @@ pip install (torch|tensorflow)
 
 ## Pre-process text (Deaccent - Lower)
 
-In order to use `bert-base-greek-uncased-v1`, you have to pre-process texts in order to lowercase letters and remove all Greek diacritics.
+In order to use `bert-base-greek-uncased-v1`, you have to pre-process texts to lowercase letters and remove all Greek diacritics.
 
 ```python
 
