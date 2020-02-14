@@ -1,10 +1,6 @@
----
-language: greek
----
-
 # GreekBERT
 
-A Greek version of BERT pre-trained language model.
+A Greek edition of Google's BERT pre-trained language model.
 
 <img src="https://github.com/nlpaueb/GreekBERT/raw/master/greek-bert-logo.png" width="600"/> 
 
@@ -35,6 +31,7 @@ Future release will also include:
 We published `bert-base-greek-uncased-v1` as part of [Hugging Face](https://huggingface.co)'s [Transformers](https://github.com/huggingface/transformers) repository. So, you need to install transfomers library through pip along with PyTorch or Tensorflow 2.
 
 ```
+pip install unicodedata
 pip install transfomers
 pip install (torch|tensorflow)
 ```
@@ -51,7 +48,7 @@ def strip_accents_and_lowercase(s):
    return ''.join(c for c in unicodedata.normalize('NFD', s)
                   if unicodedata.category(c) != 'Mn').lower()
 
-accented_string = "Αυτή είναι η Ελληνίκη έκδοση του BERT."
+accented_string = "Αυτή είναι η Ελληνική έκδοση του BERT."
 unaccented_string = strip_accents_and_lowercase(accented_string)
 
 print(unaccented_string) # αυτη ειναι η ελληνικη εκδοση του bert.
