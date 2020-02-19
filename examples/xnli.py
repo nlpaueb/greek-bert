@@ -1,6 +1,5 @@
 import click
 import os
-import urllib.request
 import random
 import json
 import torch
@@ -28,17 +27,11 @@ def cli():
 def download_data(datasets_folder_path):
     os.makedirs(datasets_folder_path, exist_ok=True)
 
-    opener = urllib.request.build_opener()
-    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-    urllib.request.install_opener(opener)
-
-    urllib.request.urlretrieve(
-        'https://www.nyu.edu/projects/bowman/xnli/XNLI-MT-1.0.zip',
-        filename=f'{datasets_folder_path}/XNLI-MT-1.0.zip'
+    os.system(
+        f'wget https://www.nyu.edu/projects/bowman/xnli/XNLI-MT-1.0.zip -P {datasets_folder_path}'
     )
-    urllib.request.urlretrieve(
-        'https://www.nyu.edu/projects/bowman/xnli/XNLI-1.0.zip',
-        filename=f'{datasets_folder_path}/XNLI-1.0.zip'
+    os.system(
+        f'wget https://www.nyu.edu/projects/bowman/xnli/XNLI-1.0.zip -P {datasets_folder_path}'
     )
 
     for file in ['XNLI-MT-1.0.zip', 'XNLI-1.0.zip']:
