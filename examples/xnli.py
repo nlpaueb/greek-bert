@@ -1,6 +1,6 @@
 import click
 import os
-import urllib
+import urllib.request
 import random
 import json
 import torch
@@ -23,15 +23,15 @@ def cli():
     pass
 
 
-@cli.command()  
+@cli.command()
 @click.argument('datasets_folder_path', type=str, default='tmp')
 def download_data(datasets_folder_path):
     os.makedirs(datasets_folder_path, exist_ok=True)
-    urllib.urlretrieve(
+    urllib.request.urlretrieve(
         'https://www.nyu.edu/projects/bowman/xnli/XNLI-MT-1.0.zip',
         filename=f'{datasets_folder_path}/XNLI-MT-1.0.zip'
     )
-    urllib.urlretrieve(
+    urllib.request.urlretrieve(
         'https://www.nyu.edu/projects/bowman/xnli/XNLI-1.0.zip',
         filename=f'{datasets_folder_path}/XNLI-1.0.zip'
     )
