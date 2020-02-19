@@ -295,10 +295,10 @@ def run_bert_experiment(train_dataset,
         train_data_loader=train_dataloader,
         evaluation_data_loaders={'dev': dev_dataloader},
         evaluators=evaluators,
+        gradient_accumulation_steps=grad_accumulation_steps,
         callbacks=[
             pw.training_callbacks.EarlyStoppingCriterionCallback(
                 patience=3,
-                gradient_accumulation_steps=grad_accumulation_steps,
                 evaluation_data_loader_key='dev',
                 evaluator_key='macro-f1',
                 tmp_best_state_filepath=f'tmp/temp.es.weights'
