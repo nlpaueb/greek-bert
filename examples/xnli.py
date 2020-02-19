@@ -23,7 +23,7 @@ def cli():
     pass
 
 
-@click.command()
+@cli.command()  
 @click.argument('datasets_folder_path', type=str, default='tmp')
 def download_data(datasets_folder_path):
     os.makedirs(datasets_folder_path, exist_ok=True)
