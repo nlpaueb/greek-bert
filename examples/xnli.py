@@ -27,6 +27,11 @@ def cli():
 @click.argument('datasets_folder_path', type=str, default='tmp')
 def download_data(datasets_folder_path):
     os.makedirs(datasets_folder_path, exist_ok=True)
+
+    opener = urllib.request.build_opener()
+    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+    urllib.request.install_opener(opener)
+
     urllib.request.urlretrieve(
         'https://www.nyu.edu/projects/bowman/xnli/XNLI-MT-1.0.zip',
         filename=f'{datasets_folder_path}/XNLI-MT-1.0.zip'
