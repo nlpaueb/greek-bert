@@ -74,8 +74,8 @@ def multi_bert():
 @multi_bert.command()
 @click.argument('datasets_folder_path', type=str, default='tmp')
 @click.option('--multi-gpu', is_flag=True)
-def tune(path, multi_gpu):
-    results = tune_bert_model('bert-base-multilingual-uncased', path, multi_gpu)
+def tune(datasets_folder_path, multi_gpu):
+    results = tune_bert_model('bert-base-multilingual-uncased', datasets_folder_path, multi_gpu)
     print(max(results, key=lambda x: x[0]))
 
 
