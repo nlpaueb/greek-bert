@@ -1,6 +1,5 @@
 import click
 import os
-import random
 import json
 import torch
 import pytorch_wrapper as pw
@@ -28,42 +27,11 @@ def download_data(datasets_folder_path):
     os.makedirs(datasets_folder_path, exist_ok=True)
 
     os.system(
-        f'wget https://www.nyu.edu/projects/bowman/xnli/XNLI-MT-1.0.zip -P {datasets_folder_path}'
-    )
-    os.system(
-        f'wget https://www.nyu.edu/projects/bowman/xnli/XNLI-1.0.zip -P {datasets_folder_path}'
+        f'wget http://nlp.cs.aueb.gr/software_and_datasets/xnli_el.zip -P {datasets_folder_path}'
     )
 
-    for file in ['XNLI-MT-1.0.zip', 'XNLI-1.0.zip']:
-        with ZipFile(f'{datasets_folder_path}/{file}', 'r') as z:
-            z.extractall(datasets_folder_path)
-
-    data = []
-    with open(f'{datasets_folder_path}/XNLI-MT-1.0/multinli/multinli.train.el.tsv') as fr:
-        _ = next(fr)
-        for l in fr:
-            premise, hypo, label = l.split('\t')
-            data.append({
-                'prem': premise,
-                'hypo': hypo,
-                'label': label.strip('\n')
-            })
-
-    random.seed(0)
-    random.shuffle(data)
-
-    with open(f'{datasets_folder_path}/xnli_el_train.jsonl', 'w') as fw:
-        for i in range(50000):
-            fw.write(json.dumps(data[i]) + '\n')
-
-    for eval_ds in ['dev', 'test']:
-        with open(f'{datasets_folder_path}/XNLI-1.0/xnli.{eval_ds}.tsv') as fr:
-            next(fr)
-            with open(f'{datasets_folder_path}/xnli_el_{eval_ds}.jsonl', 'w') as fw:
-                for l in fr:
-                    ex = l.split('\t')
-                    if ex[0] == 'el':
-                        fw.write(json.dumps({'prem': ex[16], 'hypo': ex[17], 'label': ex[1]}) + '\n')
+    with ZipFile(f'{datasets_folder_path}/xnli_el.zip', 'r') as z:
+        z.extractall(datasets_folder_path)
 
 
 @cli.group()
@@ -88,9 +56,9 @@ def tune(datasets_folder_path, multi_gpu):
 def run(datasets_folder_path, lr, dp, grad_accumulation_steps, multi_gpu):
     tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-uncased')
 
-    train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_train.jsonl', tokenizer, L2I)
-    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_dev.jsonl', tokenizer, L2I)
-    test_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_test.jsonl', tokenizer, L2I)
+    train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.train.jsonl', tokenizer, L2I)
+    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.dev.jsonl', tokenizer, L2I)
+    test_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.test.jsonl', tokenizer, L2I)
     model = AutoModel.from_pretrained('bert-base-multilingual-uncased')
 
     results = run_bert_experiment(
@@ -129,9 +97,9 @@ def tune(datasets_folder_path, multi_gpu):
 def run(datasets_folder_path, lr, dp, grad_accumulation_steps, multi_gpu):
     tokenizer = AutoTokenizer.from_pretrained('nlpaueb/bert-base-greek-uncased-v1')
 
-    train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_train.jsonl', tokenizer, L2I)
-    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_dev.jsonl', tokenizer, L2I)
-    test_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_test.jsonl', tokenizer, L2I)
+    train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.train.jsonl', tokenizer, L2I)
+    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.dev.jsonl', tokenizer, L2I)
+    test_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.test.jsonl', tokenizer, L2I)
     model = AutoModel.from_pretrained('nlpaueb/bert-base-greek-uncased-v1')
 
     results = run_bert_experiment(
@@ -150,7 +118,6 @@ def run(datasets_folder_path, lr, dp, grad_accumulation_steps, multi_gpu):
 
 L2I = {
     'neutral': 0,
-    'contradictory': 1,
     'contradiction': 1,
     'entailment': 2
 }
@@ -234,7 +201,7 @@ class BERTClassificationModel(nn.Module):
         super(BERTClassificationModel, self).__init__()
         self.model = model
         self.dp = nn.Dropout(dp)
-        self.output_linear = nn.Linear(768, 3)
+        self.output_linear = nn.Linear(768, len(L2I))
 
     def forward(self, text, text_len):
         attention_mask = pwF.create_mask_from_length(text_len, text.shape[1])
@@ -242,7 +209,7 @@ class BERTClassificationModel(nn.Module):
 
 
 def run_bert_experiment(train_dataset,
-                        dev_dataset,
+                        val_dataset,
                         eval_dataset,
                         model, lr, dp,
                         grad_accumulation_steps,
@@ -254,9 +221,9 @@ def run_bert_experiment(train_dataset,
         collate_fn=BERTXNLIDataset.collate_fn
     )
 
-    dev_dataloader = DataLoader(
-        dev_dataset,
-        sampler=SequentialSampler(dev_dataset),
+    val_dataloader = DataLoader(
+        val_dataset,
+        sampler=SequentialSampler(val_dataset),
         batch_size=8,
         collate_fn=BERTXNLIDataset.collate_fn
     )
@@ -293,13 +260,13 @@ def run_bert_experiment(train_dataset,
         loss_wrapper,
         optimizer,
         train_data_loader=train_dataloader,
-        evaluation_data_loaders={'dev': dev_dataloader},
+        evaluation_data_loaders={'val': val_dataloader},
         evaluators=evaluators,
         gradient_accumulation_steps=grad_accumulation_steps,
         callbacks=[
             pw.training_callbacks.EarlyStoppingCriterionCallback(
                 patience=3,
-                evaluation_data_loader_key='dev',
+                evaluation_data_loader_key='val',
                 evaluator_key='macro-f1',
                 tmp_best_state_filepath=f'tmp/temp.es.weights'
             )
@@ -317,8 +284,9 @@ def tune_bert_model(pretrained_bert_name, datasets_folder_path, run_on_multi_gpu
 
     tokenizer = AutoTokenizer.from_pretrained(pretrained_bert_name)
 
-    train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_train.jsonl', tokenizer, L2I)
-    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el_dev.jsonl', tokenizer, L2I)
+    train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.train.jsonl', tokenizer, L2I)
+    val_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.val.jsonl', tokenizer, L2I)
+    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.dev.jsonl', tokenizer, L2I)
 
     results = []
     for i, (lr, dp, grad_accumulation_steps) in enumerate(params):
@@ -326,7 +294,7 @@ def tune_bert_model(pretrained_bert_name, datasets_folder_path, run_on_multi_gpu
         model = AutoModel.from_pretrained(pretrained_bert_name)
         current_results = run_bert_experiment(
             train_dataset,
-            dev_dataset,
+            val_dataset,
             dev_dataset,
             model,
             lr,
