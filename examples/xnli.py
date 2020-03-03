@@ -49,9 +49,9 @@ def tune(datasets_folder_path, multi_gpu):
 
 @multi_bert.command()
 @click.argument('datasets_folder_path', type=str, default='tmp')
-@click.argument('lr', type=float)
-@click.argument('dp', type=float)
-@click.argument('grad_accumulation_steps', type=int)
+@click.argument('lr', type=float, default=2e-05)
+@click.argument('dp', type=float, default=0)
+@click.argument('grad_accumulation_steps', type=int, default=2)
 @click.option('--multi-gpu', is_flag=True)
 def run(datasets_folder_path, lr, dp, grad_accumulation_steps, multi_gpu):
     tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-uncased')
@@ -90,9 +90,9 @@ def tune(datasets_folder_path, multi_gpu):
 
 @greek_bert.command()
 @click.argument('datasets_folder_path', type=str, default='tmp')
-@click.argument('lr', type=float, default=2e-05)
-@click.argument('dp', type=float, default=0)
-@click.argument('grad_accumulation_steps', type=int, default=2)
+@click.argument('lr', type=float, default=3e-05)
+@click.argument('dp', type=float, default=0.2)
+@click.argument('grad_accumulation_steps', type=int, default=4)
 @click.option('--multi-gpu', is_flag=True)
 def run(datasets_folder_path, lr, dp, grad_accumulation_steps, multi_gpu):
     tokenizer = AutoTokenizer.from_pretrained('nlpaueb/bert-base-greek-uncased-v1')
