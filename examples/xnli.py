@@ -57,13 +57,13 @@ def run(datasets_folder_path, lr, dp, grad_accumulation_steps, multi_gpu):
     tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-uncased')
 
     train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.train.jsonl', tokenizer, L2I)
-    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.dev.jsonl', tokenizer, L2I)
+    val_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.val.jsonl', tokenizer, L2I)
     test_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.test.jsonl', tokenizer, L2I)
     model = AutoModel.from_pretrained('bert-base-multilingual-uncased')
 
     results = run_bert_experiment(
         train_dataset,
-        dev_dataset,
+        val_dataset,
         test_dataset,
         model,
         lr,
@@ -98,13 +98,13 @@ def run(datasets_folder_path, lr, dp, grad_accumulation_steps, multi_gpu):
     tokenizer = AutoTokenizer.from_pretrained('nlpaueb/bert-base-greek-uncased-v1')
 
     train_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.train.jsonl', tokenizer, L2I)
-    dev_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.dev.jsonl', tokenizer, L2I)
+    val_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.val.jsonl', tokenizer, L2I)
     test_dataset = BERTXNLIDataset(f'{datasets_folder_path}/xnli_el/xnli.el.test.jsonl', tokenizer, L2I)
     model = AutoModel.from_pretrained('nlpaueb/bert-base-greek-uncased-v1')
 
     results = run_bert_experiment(
         train_dataset,
-        dev_dataset,
+        val_dataset,
         test_dataset,
         model,
         lr,
