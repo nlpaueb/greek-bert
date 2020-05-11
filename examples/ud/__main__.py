@@ -1,37 +1,35 @@
 import click
 import os
-import json
 import fasttext
 import numpy as np
 import pickle
+import urllib.request
 
-from zipfile import ZipFile
+from conllu import parse_incr
 
-from .bert.system_wrapper import XNLIBERTSystemWrapper
-from .rnn.system_wrapper import XNLIRNNSystemWrapper
-from .rnn.dataset import XNLIRNNDataset
 from ..utils.fasttext_downloader import download_model
+from .bert.system_wrapper import UDBERTSystemWrapper
+from .rnn.system_wrapper import UDRNNSystemWrapper
 
 
 @click.group()
-def xnli():
+def ud():
     pass
 
 
-@xnli.command()
+@ud.command()
 @click.argument('data_folder_path', type=str, default='data')
 def download_data(data_folder_path):
-    os.makedirs(data_folder_path, exist_ok=True)
+    os.makedirs(f'{data_folder_path}/ud/', exist_ok=True)
+    for name, url in [
+        ('train', 'https://raw.githubusercontent.com/UniversalDependencies/UD_Greek-GDT/master/el_gdt-ud-train.conllu'),
+        ('dev', 'https://raw.githubusercontent.com/UniversalDependencies/UD_Greek-GDT/master/el_gdt-ud-dev.conllu'),
+        ('test', 'https://raw.githubusercontent.com/UniversalDependencies/UD_Greek-GDT/master/el_gdt-ud-test.conllu')
+    ]:
+        urllib.request.urlretrieve(url, f'{data_folder_path}/ud/{name}.conllu')
 
-    os.system(
-        f'wget http://nlp.cs.aueb.gr/software_and_datasets/xnli_el.zip -P {data_folder_path}'
-    )
 
-    with ZipFile(f'{data_folder_path}/xnli_el.zip', 'r') as z:
-        z.extractall(data_folder_path)
-
-
-@xnli.group()
+@ud.group()
 def multi_bert():
     pass
 
@@ -40,10 +38,10 @@ def multi_bert():
 @click.argument('data_folder_path', type=str, default='data')
 @click.option('--multi-gpu', is_flag=True)
 def tune(data_folder_path, multi_gpu):
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
+    train_dataset_file = open(f'{data_folder_path}/ud/train.conllu')
+    val_dataset_file = open(f'{data_folder_path}/ud/dev.conllu')
 
-    results = XNLIBERTSystemWrapper.tune(
+    results = UDBERTSystemWrapper.tune(
         'bert-base-multilingual-uncased',
         train_dataset_file,
         val_dataset_file,
@@ -61,11 +59,11 @@ def tune(data_folder_path, multi_gpu):
 @click.option('--grad-accumulation-steps', type=int, default=2)
 @click.option('--multi-gpu', is_flag=True)
 def run(data_folder_path, batch_size, lr, dp, grad_accumulation_steps, multi_gpu):
-    sw = XNLIBERTSystemWrapper('bert-base-multilingual-uncased', {'dp': dp})
+    sw = UDBERTSystemWrapper('bert-base-multilingual-uncased', {'dp': dp})
 
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
-    test_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.test.jsonl')
+    train_dataset_file = open(f'{data_folder_path}/ud/train.conllu')
+    val_dataset_file = open(f'{data_folder_path}/ud/dev.conllu')
+    test_dataset_file = open(f'{data_folder_path}/ud/test.conllu')
 
     sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
@@ -73,7 +71,7 @@ def run(data_folder_path, batch_size, lr, dp, grad_accumulation_steps, multi_gpu
     click.echo(results)
 
 
-@xnli.group()
+@ud.group()
 def greek_bert():
     pass
 
@@ -82,10 +80,10 @@ def greek_bert():
 @click.argument('data_folder_path', type=str, default='data')
 @click.option('--multi-gpu', is_flag=True)
 def tune(data_folder_path, multi_gpu):
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
+    train_dataset_file = open(f'{data_folder_path}/ud/train.conllu')
+    val_dataset_file = open(f'{data_folder_path}/ud/dev.conllu')
 
-    results = XNLIBERTSystemWrapper.tune(
+    results = UDBERTSystemWrapper.tune(
         'nlpaueb/bert-base-greek-uncased-v1',
         train_dataset_file,
         val_dataset_file,
@@ -103,11 +101,11 @@ def tune(data_folder_path, multi_gpu):
 @click.option('--grad-accumulation-steps', type=int, default=4)
 @click.option('--multi-gpu', is_flag=True)
 def run(data_folder_path, batch_size, lr, dp, grad_accumulation_steps, multi_gpu):
-    sw = XNLIBERTSystemWrapper('nlpaueb/bert-base-greek-uncased-v1', {'dp': dp})
+    sw = UDBERTSystemWrapper('nlpaueb/bert-base-greek-uncased-v1', {'dp': dp})
 
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
-    test_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.test.jsonl')
+    train_dataset_file = open(f'{data_folder_path}/ud/train.conllu')
+    val_dataset_file = open(f'{data_folder_path}/ud/dev.conllu')
+    test_dataset_file = open(f'{data_folder_path}/ud/test.conllu')
 
     sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
@@ -115,7 +113,7 @@ def run(data_folder_path, batch_size, lr, dp, grad_accumulation_steps, multi_gpu
     click.echo(results)
 
 
-@xnli.group()
+@ud.group()
 def rnn():
     pass
 
@@ -127,12 +125,11 @@ def download_embeddings(data_folder_path):
     ft = fasttext.load_model(f'{data_folder_path}/cc.el.300.bin')
 
     vocab = set()
-    for ds_name in ['train', 'val', 'test']:
-        with open(f'{data_folder_path}/xnli_el/xnli.el.{ds_name}.jsonl') as fr:
-            for line in fr:
-                ex = json.loads(line)
-                vocab.update(XNLIRNNDataset.process_text(ex['prem']).split())
-                vocab.update(XNLIRNNDataset.process_text(ex['hypo']).split())
+    for ds_name in ['train', 'dev', 'test']:
+        with open(f'{data_folder_path}/ud/{ds_name}.conllu') as fr:
+            for e in parse_incr(fr):
+                for t in e:
+                    vocab.add(t['form'].lower())
 
     word_vectors = []
     i2w = list(vocab)
@@ -142,7 +139,7 @@ def download_embeddings(data_folder_path):
     i2w = ['<PAD>'] + i2w
     w2i = {w: i for i, w in enumerate(i2w)}
 
-    with open(f'{data_folder_path}/xnli_el/xnli_ft.pkl', 'wb') as fw:
+    with open(f'{data_folder_path}/ud/ud_ft.pkl', 'wb') as fw:
         pickle.dump((np.array(word_vectors), w2i, i2w), fw)
 
 
@@ -150,13 +147,13 @@ def download_embeddings(data_folder_path):
 @click.argument('data_folder_path', type=str, default='data')
 @click.option('--multi-gpu', is_flag=True)
 def tune(data_folder_path, multi_gpu):
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
+    train_dataset_file = open(f'{data_folder_path}/ud/train.conllu')
+    val_dataset_file = open(f'{data_folder_path}/ud/dev.conllu')
 
-    with open(f'{data_folder_path}/xnli_el/xnli_ft.pkl', 'rb') as fr:
+    with open(f'{data_folder_path}/ud/ud_ft.pkl', 'rb') as fr:
         embeddings, w2i, _ = pickle.load(fr)
 
-    results = XNLIRNNSystemWrapper.tune(
+    results = UDRNNSystemWrapper.tune(
         embeddings,
         w2i,
         train_dataset_file,
@@ -176,10 +173,10 @@ def tune(data_folder_path, multi_gpu):
 @click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
 def run(data_folder_path, batch_size, lr, dp, rnn_hs, grad_accumulation_steps, multi_gpu):
-    with open(f'{data_folder_path}/xnli_el/xnli_ft.pkl', 'rb') as fr:
+    with open(f'{data_folder_path}/ud/ud_ft.pkl', 'rb') as fr:
         embeddings, w2i, _ = pickle.load(fr)
 
-    sw = XNLIRNNSystemWrapper(
+    sw = UDRNNSystemWrapper(
         embeddings,
         w2i, {
             'rnn_dp': dp,
@@ -187,9 +184,9 @@ def run(data_folder_path, batch_size, lr, dp, rnn_hs, grad_accumulation_steps, m
             'rnn_hidden_size': rnn_hs,
         })
 
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
-    test_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.test.jsonl')
+    train_dataset_file = open(f'{data_folder_path}/ud/train.conllu')
+    val_dataset_file = open(f'{data_folder_path}/ud/dev.conllu')
+    test_dataset_file = open(f'{data_folder_path}/ud/test.conllu')
 
     sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
@@ -198,4 +195,4 @@ def run(data_folder_path, batch_size, lr, dp, rnn_hs, grad_accumulation_steps, m
 
 
 if __name__ == '__main__':
-    xnli()
+    ud()

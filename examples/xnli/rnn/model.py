@@ -58,6 +58,7 @@ class XNLIRNNModel(nn.Module):
         prems = pack_padded_sequence(prems, prem_lens, batch_first=True, enforce_sorted=False)
         prems = self._prem_rnn(prems)[0]
         prems = pad_packed_sequence(prems, batch_first=True)[0]
+        prems = self._rnn_top_layer_dp(prems)
         prems_mask = pwF.create_mask_from_length(prem_lens, prems.shape[1])
         prem_encodings = pwF.masked_mean_pooling(prems, prems_mask, dim=1)
 
@@ -65,6 +66,7 @@ class XNLIRNNModel(nn.Module):
         hypos = pack_padded_sequence(hypos, hypo_lens, batch_first=True, enforce_sorted=False)
         hypos = self._hypo_rnn(hypos)[0]
         hypos = pad_packed_sequence(hypos, batch_first=True)[0]
+        hypos = self._rnn_top_layer_dp(hypos)
         hypos_mask = pwF.create_mask_from_length(hypo_lens, hypos.shape[1])
         hypo_encodings = pwF.masked_mean_pooling(hypos, hypos_mask, dim=1)
 
