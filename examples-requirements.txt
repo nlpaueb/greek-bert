@@ -4,3 +4,5 @@ fasttext
 pytorch-wrapper
 click
 conllu
+spacy
+pytorch-crf

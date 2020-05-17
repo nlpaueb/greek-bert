@@ -8,16 +8,19 @@ from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from torch.optim import AdamW
 from itertools import product
 
-from .model import XNLIRNNModel
-from .dataset import XNLIRNNDataset
+from ...utils.loss_wrappers import PassThroughLossWrapper
+from ...utils import evaluators
+from .model import NERRNNModel
+from .dataset import NERRNNDataset
 
 
-class XNLIRNNSystemWrapper:
+class NERRNNSystemWrapper:
 
-    def __init__(self, embeddings, w2i, model_params):
+    def __init__(self, embeddings, w2i, c2i, model_params):
 
         self._w2i = w2i
-        model = XNLIRNNModel(embeddings, **model_params)
+        self._c2i = c2i
+        model = NERRNNModel(embeddings=embeddings, **model_params)
         if torch.cuda.is_available():
             self._system = pw.System(model, last_activation=nn.Softmax(dim=-1), device=torch.device('cuda'))
         else:
@@ -25,8 +28,8 @@ class XNLIRNNSystemWrapper:
 
     def train(self, train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus):
         torch.manual_seed(0)
-        train_dataset = XNLIRNNDataset(train_dataset_file, self._w2i)
-        val_dataset = XNLIRNNDataset(val_dataset_file, self._w2i)
+        train_dataset = NERRNNDataset(train_dataset_file, self._w2i, self._c2i)
+        val_dataset = NERRNNDataset(val_dataset_file, self._w2i, self._c2i)
         self._train_impl(train_dataset, val_dataset, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus)
 
     def _train_impl(self,
@@ -41,17 +44,17 @@ class XNLIRNNSystemWrapper:
             train_dataset,
             sampler=RandomSampler(train_dataset),
             batch_size=batch_size,
-            collate_fn=XNLIRNNDataset.collate_fn
+            collate_fn=NERRNNDataset.collate_fn
         )
 
         val_dataloader = DataLoader(
             val_dataset,
             sampler=SequentialSampler(val_dataset),
             batch_size=batch_size,
-            collate_fn=XNLIRNNDataset.collate_fn
+            collate_fn=NERRNNDataset.collate_fn
         )
 
-        loss_wrapper = pw.loss_wrappers.GenericPointWiseLossWrapper(nn.CrossEntropyLoss())
+        loss_wrapper = PassThroughLossWrapper()
         optimizer = AdamW(self._system.model.parameters(), lr=lr)
 
         base_es_path = f'/tmp/{uuid.uuid4().hex[:30]}/'
@@ -64,7 +67,9 @@ class XNLIRNNSystemWrapper:
             optimizer,
             train_data_loader=train_dataloader,
             evaluation_data_loaders={'val': val_dataloader},
-            evaluators={'macro-f1': pw.evaluators.MultiClassF1Evaluator(average='macro')},
+            evaluators={
+                'macro-f1': evaluators.MultiClassF1EvaluatorMaskedTokenEntityLabelingEvaluator(train_dataset.I2L)
+            },
             gradient_accumulation_steps=grad_accumulation_steps,
             callbacks=[
                 pw.training_callbacks.EarlyStoppingCriterionCallback(
@@ -77,7 +82,7 @@ class XNLIRNNSystemWrapper:
         )
 
     def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus):
-        eval_dataset = XNLIRNNDataset(eval_dataset_file, self._w2i)
+        eval_dataset = NERRNNDataset(eval_dataset_file, self._w2i, self._c2i)
         return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus)
 
     def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus):
@@ -86,24 +91,22 @@ class XNLIRNNSystemWrapper:
             eval_dataset,
             sampler=SequentialSampler(eval_dataset),
             batch_size=batch_size,
-            collate_fn=XNLIRNNDataset.collate_fn
+            collate_fn=NERRNNDataset.collate_fn
         )
 
-        evaluators = {
-
-            'acc': pw.evaluators.MultiClassAccuracyEvaluator(),
-            'macro-prec': pw.evaluators.MultiClassPrecisionEvaluator(average='macro'),
-            'macro-rec': pw.evaluators.MultiClassRecallEvaluator(average='macro'),
-            'macro-f1': pw.evaluators.MultiClassF1Evaluator(average='macro')
+        evals = {
+            'macro-prec': evaluators.MultiClassPrecisionEvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L),
+            'macro-rec': evaluators.MultiClassRecallEvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L),
+            'macro-f1': evaluators.MultiClassF1EvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L)
         }
 
         if run_on_multi_gpus:
-            return self._system.evaluate_on_multi_gpus(eval_dataloader, evaluators)
+            return self._system.evaluate_on_multi_gpus(eval_dataloader, evals)
         else:
-            return self._system.evaluate(eval_dataloader, evaluators)
+            return self._system.evaluate(eval_dataloader, evals)
 
     @staticmethod
-    def tune(embeddings, w2i, train_dataset_file, val_dataset_file, run_on_multi_gpus):
+    def tune(embeddings, w2i, c2i, train_dataset_file, val_dataset_file, run_on_multi_gpus):
         lrs = [0.01, 0.001]
         batch_size = [16, 32, 64]
         dp = [0, 0.1, 0.2, 0.3]
@@ -111,20 +114,22 @@ class XNLIRNNSystemWrapper:
         params = list(product(lrs, dp, batch_size, hs))
         grad_accumulation_steps = 1
 
-        train_dataset = XNLIRNNDataset(train_dataset_file, w2i)
-        val_dataset = XNLIRNNDataset(val_dataset_file, w2i)
+        train_dataset = NERRNNDataset(train_dataset_file, w2i, c2i)
+        val_dataset = NERRNNDataset(val_dataset_file, w2i, c2i)
 
         results = []
         for i, (lr, dp, batch_size, hs) in enumerate(params):
             print(f'{i + 1}/{len(params)}')
             torch.manual_seed(0)
-            current_system_wrapper = XNLIRNNSystemWrapper(
+            current_system_wrapper = NERRNNSystemWrapper(
                 embeddings,
                 w2i,
+                c2i,
                 {
                     'rnn_dp': dp,
                     'mlp_dp': dp,
                     'rnn_hidden_size': hs,
+                    'char_embeddings_shape': (len(c2i), 20)  # todo: fix this
                 }
             )
             current_system_wrapper._train_impl(

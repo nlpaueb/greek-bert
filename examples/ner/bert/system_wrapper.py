@@ -5,21 +5,22 @@ import uuid
 
 from torch import nn
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
-from torch.optim import AdamW
 from itertools import product
+from transformers import AutoTokenizer, AutoModel, AdamW
 
-from ...utils.loss_wrappers import PassThroughLossWrapper
-from .model import UDRNNModel
-from .dataset import UDRNNDataset
+from ...utils import loss_wrappers, evaluators
+from .model import NERBERTModel
+from .dataset import NERBERTDataset
 
 
-class UDRNNSystemWrapper:
+class NERBERTSystemWrapper:
 
-    def __init__(self, embeddings, w2i, c2i, model_params):
+    def __init__(self, pretrained_bert_name, model_params):
 
-        self._w2i = w2i
-        self._c2i = c2i
-        model = UDRNNModel(embeddings=embeddings, **model_params)
+        self._pretrained_bert_name = pretrained_bert_name
+        bert_model = AutoModel.from_pretrained(pretrained_bert_name)
+        model = NERBERTModel(bert_model, **model_params)
+
         if torch.cuda.is_available():
             self._system = pw.System(model, last_activation=nn.Softmax(dim=-1), device=torch.device('cuda'))
         else:
@@ -27,8 +28,9 @@ class UDRNNSystemWrapper:
 
     def train(self, train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus):
         torch.manual_seed(0)
-        train_dataset = UDRNNDataset(train_dataset_file, self._w2i, self._c2i)
-        val_dataset = UDRNNDataset(val_dataset_file, self._w2i, self._c2i)
+        tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
+        train_dataset = NERBERTDataset(train_dataset_file, tokenizer)
+        val_dataset = NERBERTDataset(val_dataset_file, tokenizer)
         self._train_impl(train_dataset, val_dataset, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus)
 
     def _train_impl(self,
@@ -43,17 +45,17 @@ class UDRNNSystemWrapper:
             train_dataset,
             sampler=RandomSampler(train_dataset),
             batch_size=batch_size,
-            collate_fn=UDRNNDataset.collate_fn
+            collate_fn=NERBERTDataset.collate_fn
         )
 
         val_dataloader = DataLoader(
             val_dataset,
             sampler=SequentialSampler(val_dataset),
             batch_size=batch_size,
-            collate_fn=UDRNNDataset.collate_fn
+            collate_fn=NERBERTDataset.collate_fn
         )
 
-        loss_wrapper = PassThroughLossWrapper()
+        loss_wrapper = loss_wrappers.MaskedTokenLabelingGenericPointWiseLossWrapper(nn.CrossEntropyLoss())
         optimizer = AdamW(self._system.model.parameters(), lr=lr)
 
         base_es_path = f'/tmp/{uuid.uuid4().hex[:30]}/'
@@ -67,10 +69,7 @@ class UDRNNSystemWrapper:
             train_data_loader=train_dataloader,
             evaluation_data_loaders={'val': val_dataloader},
             evaluators={
-                'macro-f1': pw.evaluators.TokenLabelingEvaluatorWrapper(
-                    pw.evaluators.MultiClassF1Evaluator(average='macro'),
-                    4
-                )
+                'macro-f1': evaluators.MultiClassF1EvaluatorMaskedTokenEntityLabelingEvaluator(train_dataset.I2L)
             },
             gradient_accumulation_steps=grad_accumulation_steps,
             callbacks=[
@@ -84,7 +83,8 @@ class UDRNNSystemWrapper:
         )
 
     def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus):
-        eval_dataset = UDRNNDataset(eval_dataset_file, self._w2i, self._c2i)
+        tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
+        eval_dataset = NERBERTDataset(eval_dataset_file, tokenizer)
         return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus)
 
     def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus):
@@ -93,61 +93,38 @@ class UDRNNSystemWrapper:
             eval_dataset,
             sampler=SequentialSampler(eval_dataset),
             batch_size=batch_size,
-            collate_fn=UDRNNDataset.collate_fn
+            collate_fn=NERBERTDataset.collate_fn
         )
 
-        evaluators = {
-
-            'acc': pw.evaluators.TokenLabelingEvaluatorWrapper(
-                pw.evaluators.MultiClassAccuracyEvaluator(),
-                4
-            ),
-            'macro-prec': pw.evaluators.TokenLabelingEvaluatorWrapper(
-                pw.evaluators.MultiClassPrecisionEvaluator(average='macro'),
-                4
-            ),
-            'macro-rec': pw.evaluators.TokenLabelingEvaluatorWrapper(
-                pw.evaluators.MultiClassRecallEvaluator(average='macro'),
-                4
-            ),
-            'macro-f1': pw.evaluators.TokenLabelingEvaluatorWrapper(
-                pw.evaluators.MultiClassF1Evaluator(average='macro'),
-                4
-            )
+        evals = {
+            'macro-prec': evaluators.MultiClassPrecisionEvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L),
+            'macro-rec': evaluators.MultiClassRecallEvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L),
+            'macro-f1': evaluators.MultiClassF1EvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L)
         }
 
         if run_on_multi_gpus:
-            return self._system.evaluate_on_multi_gpus(eval_dataloader, evaluators)
+            return self._system.evaluate_on_multi_gpus(eval_dataloader, evals)
         else:
-            return self._system.evaluate(eval_dataloader, evaluators)
+            return self._system.evaluate(eval_dataloader, evals)
 
     @staticmethod
-    def tune(embeddings, w2i, c2i, train_dataset_file, val_dataset_file, run_on_multi_gpus):
-        lrs = [0.01, 0.001]
-        batch_size = [16, 32, 64]
-        dp = [0, 0.1, 0.2, 0.3]
-        hs = [100, 200, 300]
-        params = list(product(lrs, dp, batch_size, hs))
-        grad_accumulation_steps = 1
+    def tune(pretrained_bert_name, train_dataset_file, val_dataset_file, run_on_multi_gpus):
+        lrs = [5e-5, 3e-5, 2e-5]
+        dp = [0, 0.1, 0.2]
+        grad_accumulation_steps = [2, 4]
+        batch_size = 8
+        params = list(product(lrs, dp, grad_accumulation_steps))
 
-        train_dataset = UDRNNDataset(train_dataset_file, w2i, c2i)
-        val_dataset = UDRNNDataset(val_dataset_file, w2i, c2i)
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_bert_name)
+
+        train_dataset = NERBERTDataset(train_dataset_file, tokenizer)
+        val_dataset = NERBERTDataset(val_dataset_file, tokenizer)
 
         results = []
-        for i, (lr, dp, batch_size, hs) in enumerate(params):
+        for i, (lr, dp, grad_accumulation_steps) in enumerate(params):
             print(f'{i + 1}/{len(params)}')
             torch.manual_seed(0)
-            current_system_wrapper = UDRNNSystemWrapper(
-                embeddings,
-                w2i,
-                c2i,
-                {
-                    'rnn_dp': dp,
-                    'mlp_dp': dp,
-                    'rnn_hidden_size': hs,
-                    'char_embeddings_shape': (len(c2i), 20)  # todo: fix this
-                }
-            )
+            current_system_wrapper = NERBERTSystemWrapper(pretrained_bert_name, {'dp': dp})
             current_system_wrapper._train_impl(
                 train_dataset,
                 val_dataset,
@@ -158,6 +135,6 @@ class UDRNNSystemWrapper:
             )
 
             current_results = current_system_wrapper._evaluate_impl(val_dataset, batch_size, run_on_multi_gpus)
-            results.append([current_results['macro-f1'].score, (lr, dp, batch_size, hs)])
+            results.append([current_results['macro-f1'].score, (lr, dp, grad_accumulation_steps)])
 
         return results

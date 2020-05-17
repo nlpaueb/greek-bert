@@ -7,11 +7,6 @@ import pickle
 
 from zipfile import ZipFile
 
-from .bert.system_wrapper import XNLIBERTSystemWrapper
-from .rnn.system_wrapper import XNLIRNNSystemWrapper
-from .rnn.dataset import XNLIRNNDataset
-from ..utils.fasttext_downloader import download_model
-
 
 @click.group()
 def xnli():
@@ -22,10 +17,7 @@ def xnli():
 @click.argument('data_folder_path', type=str, default='data')
 def download_data(data_folder_path):
     os.makedirs(data_folder_path, exist_ok=True)
-
-    os.system(
-        f'wget http://nlp.cs.aueb.gr/software_and_datasets/xnli_el.zip -P {data_folder_path}'
-    )
+    os.system(f'wget http://nlp.cs.aueb.gr/software_and_datasets/xnli_el.zip -P {data_folder_path}')
 
     with ZipFile(f'{data_folder_path}/xnli_el.zip', 'r') as z:
         z.extractall(data_folder_path)
@@ -37,11 +29,11 @@ def multi_bert():
 
 
 @multi_bert.command()
-@click.argument('data_folder_path', type=str, default='data')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
 @click.option('--multi-gpu', is_flag=True)
-def tune(data_folder_path, multi_gpu):
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
+def tune(train_dataset_file, val_dataset_file, multi_gpu):
+    from .bert.system_wrapper import XNLIBERTSystemWrapper
 
     results = XNLIBERTSystemWrapper.tune(
         'bert-base-multilingual-uncased',
@@ -54,18 +46,19 @@ def tune(data_folder_path, multi_gpu):
 
 
 @multi_bert.command()
-@click.argument('data_folder_path', type=str, default='data')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.option('--batch-size', type=int, default=8)
 @click.option('--lr', type=float, default=2e-05)
 @click.option('--dp', type=float, default=0.)
 @click.option('--grad-accumulation-steps', type=int, default=2)
 @click.option('--multi-gpu', is_flag=True)
-def run(data_folder_path, batch_size, lr, dp, grad_accumulation_steps, multi_gpu):
-    sw = XNLIBERTSystemWrapper('bert-base-multilingual-uncased', {'dp': dp})
+def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
+        multi_gpu):
+    from .bert.system_wrapper import XNLIBERTSystemWrapper
 
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
-    test_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.test.jsonl')
+    sw = XNLIBERTSystemWrapper('bert-base-multilingual-uncased', {'dp': dp})
 
     sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
@@ -79,11 +72,11 @@ def greek_bert():
 
 
 @greek_bert.command()
-@click.argument('data_folder_path', type=str, default='data')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
 @click.option('--multi-gpu', is_flag=True)
-def tune(data_folder_path, multi_gpu):
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
+def tune(train_dataset_file, val_dataset_file, multi_gpu):
+    from .bert.system_wrapper import XNLIBERTSystemWrapper
 
     results = XNLIBERTSystemWrapper.tune(
         'nlpaueb/bert-base-greek-uncased-v1',
@@ -96,18 +89,19 @@ def tune(data_folder_path, multi_gpu):
 
 
 @greek_bert.command()
-@click.argument('data_folder_path', type=str, default='data')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.option('--batch-size', type=int, default=8)
 @click.option('--lr', type=float, default=3e-05)
 @click.option('--dp', type=float, default=0.2)
 @click.option('--grad-accumulation-steps', type=int, default=4)
 @click.option('--multi-gpu', is_flag=True)
-def run(data_folder_path, batch_size, lr, dp, grad_accumulation_steps, multi_gpu):
-    sw = XNLIBERTSystemWrapper('nlpaueb/bert-base-greek-uncased-v1', {'dp': dp})
+def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
+        multi_gpu):
+    from .bert.system_wrapper import XNLIBERTSystemWrapper
 
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
-    test_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.test.jsonl')
+    sw = XNLIBERTSystemWrapper('nlpaueb/bert-base-greek-uncased-v1', {'dp': dp})
 
     sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
@@ -116,23 +110,32 @@ def run(data_folder_path, batch_size, lr, dp, grad_accumulation_steps, multi_gpu
 
 
 @xnli.group()
-def rnn():
+def dam():
     pass
 
 
-@rnn.command()
-@click.argument('data_folder_path', type=str, default='data')
-def download_embeddings(data_folder_path):
-    download_model('el', data_folder_path, if_exists='ignore')
-    ft = fasttext.load_model(f'{data_folder_path}/cc.el.300.bin')
+@dam.command()
+@click.argument('tmp_download_path', type=str, default='data')
+@click.argument('embeddings_save_path', type=str, default='data/xnli_el/xnli_ft.pkl')
+@click.argument('dataset_file_paths', type=str, nargs=-1)
+def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_paths):
+    from ..utils.fasttext_downloader import download_model
+    from .dam.dataset import XNLIDAMDataset
+
+    # todo: add big train
+    if not dataset_file_paths:
+        dataset_file_paths = [f'data/xnli_el/xnli.el.{ds}.jsonl' for ds in ('train', 'val', 'test')]
+
+    download_model('el', tmp_download_path, if_exists='ignore')
+    ft = fasttext.load_model(f'{tmp_download_path}/cc.el.300.bin')
 
     vocab = set()
-    for ds_name in ['train', 'val', 'test']:
-        with open(f'{data_folder_path}/xnli_el/xnli.el.{ds_name}.jsonl') as fr:
+    for ds in dataset_file_paths:
+        with open(ds) as fr:
             for line in fr:
                 ex = json.loads(line)
-                vocab.update(XNLIRNNDataset.process_text(ex['prem']).split())
-                vocab.update(XNLIRNNDataset.process_text(ex['hypo']).split())
+                vocab.update(XNLIDAMDataset.process_text(ex['prem']))
+                vocab.update(XNLIDAMDataset.process_text(ex['hypo']))
 
     word_vectors = []
     i2w = list(vocab)
@@ -142,21 +145,21 @@ def download_embeddings(data_folder_path):
     i2w = ['<PAD>'] + i2w
     w2i = {w: i for i, w in enumerate(i2w)}
 
-    with open(f'{data_folder_path}/xnli_el/xnli_ft.pkl', 'wb') as fw:
+    with open(embeddings_save_path, 'wb') as fw:
         pickle.dump((np.array(word_vectors), w2i, i2w), fw)
 
 
-@rnn.command()
-@click.argument('data_folder_path', type=str, default='data')
+@dam.command()
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('embeddings_file', type=click.File('rb'), default='data/xnli_el/xnli_ft.pkl')
 @click.option('--multi-gpu', is_flag=True)
-def tune(data_folder_path, multi_gpu):
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
+def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
+    from .dam.system_wrapper import XNLIDAMSystemWrapper
 
-    with open(f'{data_folder_path}/xnli_el/xnli_ft.pkl', 'rb') as fr:
-        embeddings, w2i, _ = pickle.load(fr)
+    embeddings, w2i, _ = pickle.load(embeddings_file)
 
-    results = XNLIRNNSystemWrapper.tune(
+    results = XNLIDAMSystemWrapper.tune(
         embeddings,
         w2i,
         train_dataset_file,
@@ -167,29 +170,30 @@ def tune(data_folder_path, multi_gpu):
     click.echo(max(results, key=lambda x: x[0]))
 
 
-@rnn.command()
-@click.argument('data_folder_path', type=str, default='data')
-@click.option('--batch-size', type=int, default=16)
-@click.option('--lr', type=float, default=1e-03)
-@click.option('--dp', type=float, default=0.1)
-@click.option('--rnn-hs', type=int, default=100)
+@dam.command()
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
+@click.argument('embeddings_file', type=click.File('rb'), default='data/xnli_el/xnli_ft.pkl')
+@click.option('--batch-size', type=int, default=128)
+@click.option('--lr', type=float, default=0.001)
+@click.option('--dp', type=float, default=0.2)
+@click.option('--rnn-hs', type=int, default=128)
 @click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
-def run(data_folder_path, batch_size, lr, dp, rnn_hs, grad_accumulation_steps, multi_gpu):
-    with open(f'{data_folder_path}/xnli_el/xnli_ft.pkl', 'rb') as fr:
-        embeddings, w2i, _ = pickle.load(fr)
+def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file, batch_size, lr, dp, rnn_hs,
+        grad_accumulation_steps, multi_gpu):
+    from .dam.system_wrapper import XNLIDAMSystemWrapper
 
-    sw = XNLIRNNSystemWrapper(
+    embeddings, w2i, _ = pickle.load(embeddings_file)
+
+    sw = XNLIDAMSystemWrapper(
         embeddings,
         w2i, {
             'rnn_dp': dp,
             'mlp_dp': dp,
             'rnn_hidden_size': rnn_hs,
         })
-
-    train_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.train.jsonl')
-    val_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.val.jsonl')
-    test_dataset_file = open(f'{data_folder_path}/xnli_el/xnli.el.test.jsonl')
 
     sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)

@@ -9,7 +9,7 @@ from torchcrf import CRF
 from ...utils.sequences import pad_to_max
 
 
-class UDRNNModel(nn.Module):
+class NERRNNModel(nn.Module):
 
     def __init__(self,
                  char_embeddings_shape,
@@ -25,7 +25,7 @@ class UDRNNModel(nn.Module):
                  mlp_hidden_size=128,
                  mlp_activation=nn.ReLU,
                  mlp_dp=0.2):
-        super(UDRNNModel, self).__init__()
+        super(NERRNNModel, self).__init__()
 
         self._char_embedding_layer = pw.modules.EmbeddingLayer(
             char_embeddings_shape[0],
@@ -104,5 +104,5 @@ class UDRNNModel(nn.Module):
         else:
             predictions = self._crf.decode(mlp_out, mask)
             predictions = torch.tensor(pad_to_max(predictions), dtype=torch.long).to(mlp_out.device)
-            one_hot_pred = torch.eye(17).to(mlp_out.device)[[predictions]]
+            one_hot_pred = torch.eye(7).to(mlp_out.device)[[predictions]]
             return one_hot_pred

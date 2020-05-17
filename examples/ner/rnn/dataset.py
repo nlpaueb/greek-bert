@@ -2,30 +2,20 @@ import torch
 import itertools
 
 from torch.utils.data import Dataset
-from conllu import parse_incr
 
 from ...utils.sequences import pad_to_max
+from ..utils import parse_ner_dataset_file
 
 
-class UDRNNDataset(Dataset):
+class NERRNNDataset(Dataset):
     I2L = [
-        'ADJ',
-        'ADP',
-        'ADV',
-        'AUX',
-        'CCONJ',
-        'DET',
-        'NOUN',
-        'NUM',
-        'PART',
-        'PRON',
-        'PROPN',
-        'PUNCT',
-        'SCONJ',
-        'SYM',
-        'VERB',
-        'X',
-        '_'
+        'B-LOC',
+        'B-ORG',
+        'B-PER',
+        'I-LOC',
+        'I-ORG',
+        'I-PER',
+        'O'
     ]
     L2I = {k: i for i, k in enumerate(I2L)}
 
@@ -37,7 +27,7 @@ class UDRNNDataset(Dataset):
         self.char_word_lens = []
         self.targets = []
 
-        for i, tokenlist in enumerate(parse_incr(dataset_file)):
+        for i, tokenlist in enumerate(parse_ner_dataset_file(dataset_file)):
             cur_words, cur_words_len, cur_char_words, cur_char_word_lens, cur_targets = \
                 self.process_example(tokenlist, w2i, c2i)
 
@@ -107,9 +97,9 @@ class UDRNNDataset(Dataset):
         targets = []
 
         for token in tokens:
-            processed_tokens.append(w2i[token['form'].lower()])
-            char_words.append([c2i.get(c, 1) for c in list(token['form'])])
+            processed_tokens.append(w2i[token['text'].lower()])
+            char_words.append([c2i.get(c, 1) for c in list(token['text'])])
             char_word_lens.append(len(char_words[-1]))
-            targets.append(token['upostag'])
+            targets.append(token['label'])
 
         return processed_tokens, len(processed_tokens), char_words, char_word_lens, targets

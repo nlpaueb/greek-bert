@@ -1,14 +1,16 @@
 import torch
 import json
-import re
+import spacy
 
 from tqdm.auto import tqdm
 from torch.utils.data import Dataset
 
 from ...utils.sequences import pad_to_max
 
+nlp = spacy.load('el', disable=['parser', 'ner'])
 
-class XNLIRNNDataset(Dataset):
+
+class XNLIDAMDataset(Dataset):
     L2I = {
         'neutral': 0,
         'contradiction': 1,
@@ -66,11 +68,11 @@ class XNLIRNNDataset(Dataset):
 
     @staticmethod
     def process_example(ex, w2i):
-        premise = [w2i[t] for t in XNLIRNNDataset.process_text(ex['prem']).split()]
-        hypothesis = [w2i[t] for t in XNLIRNNDataset.process_text(ex['hypo']).split()]
+        premise = [w2i[t] for t in XNLIDAMDataset.process_text(ex['prem'])]
+        hypothesis = [w2i[t] for t in XNLIDAMDataset.process_text(ex['hypo'])]
 
         return premise, len(premise), hypothesis, len(hypothesis)
 
     @staticmethod
     def process_text(text):
-        return re.sub(r'(\W)', r' \1 ', text).lower()
+        return [t.text for t in nlp(text)]

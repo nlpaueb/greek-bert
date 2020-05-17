@@ -41,3 +41,34 @@ class MaskedTokenLabelingGenericPointWiseLossWrapper(AbstractLossWrapper):
 
         return self._loss(output, target)
 
+
+class PassThroughLossWrapper(AbstractLossWrapper):
+    """
+    Dummy adapter that returns the loss as returned by the model. Useful when the loss is calculated inside the model's
+        forward method.
+    """
+
+    def __init__(self, model_loss_key=None):
+        """
+        :param model_loss_key: Key where the dict returned by the model contains the calculated loss. Leave None if the
+            model returns only the loss.
+        """
+        super(PassThroughLossWrapper, self).__init__()
+        self._model_loss_key = model_loss_key
+
+    def calculate_loss(self, output, batch, training_context, last_activation=None):
+        """
+        Calculates the loss for a single batch.
+        :param output: Output of the model.
+        :param batch: Dict that contains all information needed by the loss wrapper.
+        :param training_context: Dict containing information regarding the training process.
+        :param last_activation: Last activation provided to the System.
+        :return: Output of the loss function/module.
+        """
+        if self._model_loss_key is None:
+            return output
+        else:
+            return output[self._model_loss_key]
+
+    def to(self, device):
+        pass
