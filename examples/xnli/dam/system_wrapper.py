@@ -68,7 +68,7 @@ class XNLIDAMSystemWrapper:
             gradient_accumulation_steps=grad_accumulation_steps,
             callbacks=[
                 pw.training_callbacks.EarlyStoppingCriterionCallback(
-                    patience=50,
+                    patience=3,
                     evaluation_data_loader_key='val',
                     evaluator_key='macro-f1',
                     tmp_best_state_filepath=f'{base_es_path}/temp.es.weights'
@@ -104,39 +104,36 @@ class XNLIDAMSystemWrapper:
 
     @staticmethod
     def tune(embeddings, w2i, train_dataset_file, val_dataset_file, run_on_multi_gpus):
-        lrs = [0.01, 0.001]
+        lrs = [0.01, 0.001, 0.0001]
         batch_size = [16, 32, 64]
-        dp = [0, 0.1, 0.2, 0.3]
-        hs = [100, 200, 300]
-        params = list(product(lrs, dp, batch_size, hs))
+        mlp_dp = [0, 0.1, 0.2, 0.3]
+        params = list(product(lrs, batch_size, mlp_dp))
         grad_accumulation_steps = 1
 
         train_dataset = XNLIDAMDataset(train_dataset_file, w2i)
         val_dataset = XNLIDAMDataset(val_dataset_file, w2i)
 
         results = []
-        for i, (lr, dp, batch_size, hs) in enumerate(params):
+        for i, (lr, bs, dp) in enumerate(params):
             print(f'{i + 1}/{len(params)}')
             torch.manual_seed(0)
             current_system_wrapper = XNLIDAMSystemWrapper(
                 embeddings,
                 w2i,
                 {
-                    'rnn_dp': dp,
-                    'mlp_dp': dp,
-                    'rnn_hidden_size': hs,
+                    'mlp_dp': dp
                 }
             )
             current_system_wrapper._train_impl(
                 train_dataset,
                 val_dataset,
                 lr,
-                batch_size,
+                bs,
                 grad_accumulation_steps,
                 run_on_multi_gpus
             )
 
             current_results = current_system_wrapper._evaluate_impl(val_dataset, batch_size, run_on_multi_gpus)
-            results.append([current_results['macro-f1'].score, (lr, dp, batch_size, hs)])
+            results.append([current_results['macro-f1'].score, (lr, bs, dp)])
 
         return results

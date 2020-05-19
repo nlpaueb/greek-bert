@@ -51,8 +51,8 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.option('--batch-size', type=int, default=8)
 @click.option('--lr', type=float, default=2e-05)
-@click.option('--dp', type=float, default=0.)
-@click.option('--grad-accumulation-steps', type=int, default=2)
+@click.option('--dp', type=float, default=0.2)
+@click.option('--grad-accumulation-steps', type=int, default=4)
 @click.option('--multi-gpu', is_flag=True)
 def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
         multi_gpu):
