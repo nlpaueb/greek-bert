@@ -105,9 +105,8 @@ def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_pa
     download_model('el', tmp_download_path, if_exists='ignore')
     ft = fasttext.load_model(f'{tmp_download_path}/cc.el.300.bin')
 
-    # todo: add big train
     if not dataset_file_paths:
-        dataset_file_paths = [f'data/ner/{ds}.txt' for ds in ('train', 'dev', 'test')]
+        dataset_file_paths = [f'data/ner/{ds}.txt' for ds in ('train', 'dev', 'test', 'silver_train')]
 
     vocab = set()
     for p in dataset_file_paths:
