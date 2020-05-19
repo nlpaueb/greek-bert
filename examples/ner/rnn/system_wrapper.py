@@ -113,6 +113,7 @@ class NERRNNSystemWrapper:
         hs = [100, 200, 300]
         params = list(product(lrs, dp, batch_size, hs))
         grad_accumulation_steps = 1
+        char_embedding_size = 30
 
         train_dataset = NERRNNDataset(train_dataset_file, w2i, c2i)
         val_dataset = NERRNNDataset(val_dataset_file, w2i, c2i)
@@ -129,7 +130,7 @@ class NERRNNSystemWrapper:
                     'rnn_dp': dp,
                     'mlp_dp': dp,
                     'rnn_hidden_size': hs,
-                    'char_embeddings_shape': (len(c2i), 20)  # todo: fix this
+                    'char_embeddings_shape': (len(c2i), char_embedding_size)
                 }
             )
             current_system_wrapper._train_impl(

@@ -14,8 +14,8 @@ class NERRNNModel(nn.Module):
     def __init__(self,
                  char_embeddings_shape,
                  embeddings,
-                 char_cnn_kernel_heights=(1, 3, 5),
-                 char_cnn_out_channels=20,
+                 char_cnn_kernel_heights=(3,),
+                 char_cnn_out_channels=30,
                  rnn_class=nn.GRU,
                  rnn_hidden_size=128,
                  rnn_num_layers=2,
@@ -42,6 +42,8 @@ class NERRNNModel(nn.Module):
 
         self._embedding_layer = pw.modules.EmbeddingLayer(embeddings.shape[0], embeddings.shape[1], False, 0)
         self._embedding_layer.load_embeddings(embeddings)
+
+        self._embedding_dp = nn.Dropout(rnn_dp)
 
         self._rnn = rnn_class(
             input_size=embeddings.shape[1] + char_cnn_out_channels * len(char_cnn_kernel_heights),
@@ -90,6 +92,7 @@ class NERRNNModel(nn.Module):
 
         texts = self._embedding_layer(batched_tokens)
         texts = torch.cat([texts, token_encodings_indexed], -1)
+        texts = self._embedding_dp(texts)
 
         texts = pack_padded_sequence(texts, batched_tokens_len, batch_first=True, enforce_sorted=False)
         texts = self._rnn(texts)[0]

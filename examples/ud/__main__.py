@@ -144,23 +144,19 @@ def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_pa
 
 
 @rnn.command()
+@click.argument('train_dataset_file', type=click.File('r'), default='data/ud/train.txt')
 @click.argument('char_vocab_save_path', type=str, default='data/ud/char_voc.pkl')
-@click.argument('dataset_file_paths', type=str, nargs=-1)
-def create_char_vocab(char_vocab_save_path, dataset_file_paths):
-    # todo: add big train
-    if not dataset_file_paths:
-        dataset_file_paths = [f'data/ud/{ds}.conllu' for ds in ('train', 'dev', 'test')]
-
+def create_char_vocab(train_dataset_file, char_vocab_save_path):
     vocab = set()
-    for p in dataset_file_paths:
-        with open(p) as fr:
-            for e in parse_incr(fr):
-                for t in e:
-                    vocab.update(list(t['form']))
+    for e in parse_incr(train_dataset_file):
+        for t in e:
+            vocab.update(list(t['form']))
 
-    c2i = {c: i + 2 for i, c in enumerate(vocab)}
+    c2i = {c: i + 4 for i, c in enumerate(vocab)}
     c2i['<PAD>'] = 0
     c2i['<UNK>'] = 1
+    c2i['<SOW>'] = 2
+    c2i['<EOW>'] = 3
 
     with open(char_vocab_save_path, 'wb') as fw:
         pickle.dump(c2i, fw)
@@ -198,7 +194,7 @@ def tune(train_dataset_file, dev_dataset_file, embeddings_file, char_vocab_file,
 @click.option('--lr', type=float, default=1e-03)
 @click.option('--dp', type=float, default=0.1)
 @click.option('--rnn-hs', type=int, default=100)
-@click.option('--char-emb-size', type=int, default=20)
+@click.option('--char-emb-size', type=int, default=30)
 @click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
 def run(train_dataset_file, dev_dataset_file, test_dataset_file, embeddings_file, char_vocab_file, batch_size, lr, dp,
