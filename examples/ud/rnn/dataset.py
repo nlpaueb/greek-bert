@@ -110,7 +110,7 @@ class UDRNNDataset(Dataset):
             processed_tokens.append(w2i[token['form'].lower()])
             char_words.append(
                 [c2i['<SOW>']] +
-                [c2i.get(c, 1) for c in list(token['form'])]
+                [c2i.get(c, 1) for c in list(token['form'])] +
                 [c2i['<EOW>']]
             )
             char_word_lens.append(len(char_words[-1]))
