@@ -122,7 +122,7 @@ def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_pa
 
     # todo: add big train
     if not dataset_file_paths:
-        dataset_file_paths = [f'data/ud/{ds}.conllu' for ds in ('train', 'dev', 'test')]
+        dataset_file_paths = [f'data/ud/{ds}.conllu' for ds in ('train', 'dev', 'test', 'silver_train')]
 
     vocab = set()
     for p in dataset_file_paths:
