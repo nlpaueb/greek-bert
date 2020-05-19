@@ -99,7 +99,7 @@ def rnn():
 
 @rnn.command()
 @click.argument('tmp_download_path', type=str, default='data')
-@click.argument('embeddings_save_path', type=str, default='data/ner/ner_ft.txt')
+@click.argument('embeddings_save_path', type=str, default='data/ner/ner_ft.pkl')
 @click.argument('dataset_file_paths', type=str, nargs=-1)
 def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_paths):
     download_model('el', tmp_download_path, if_exists='ignore')
@@ -174,7 +174,7 @@ def tune(train_dataset_file, dev_dataset_file, embeddings_file, char_vocab_file,
 @click.argument('train_dataset_file', type=click.File('r'), default='data/ner/train.txt')
 @click.argument('dev_dataset_file', type=click.File('r'), default='data/ner/dev.txt')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/ner/test.txt')
-@click.argument('embeddings_file', type=click.File('rb'), default='data/ner/ner_ft.txt')
+@click.argument('embeddings_file', type=click.File('rb'), default='data/ner/ner_ft.pkl')
 @click.argument('char_vocab_file', type=click.File('rb'), default='data/ner/char_voc.pkl')
 @click.option('--batch-size', type=int, default=64)
 @click.option('--lr', type=float, default=1e-03)

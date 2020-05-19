@@ -1,5 +1,6 @@
 import torch
 import itertools
+import pytorch_wrapper.functional as pwF
 
 from torch.utils.data import Dataset
 
@@ -73,6 +74,9 @@ class NERRNNDataset(Dataset):
         batched_tokens = torch.tensor(pad_to_max(input_zipped[2]), dtype=torch.long)
         batched_tokens_len = torch.tensor(input_zipped[3], dtype=torch.int)
 
+        with torch.no_grad():
+            pred_mask = pwF.create_mask_from_length(batched_tokens_len, torch.max(batched_tokens_len).item())
+
         target = torch.tensor(pad_to_max(batch_zipped[2], pad_value=-1), dtype=torch.long)
 
         return {
@@ -85,7 +89,8 @@ class NERRNNDataset(Dataset):
                 batched_tokens_len,
                 target
             ],
-            'target': target
+            'target': target,
+            'mask': pred_mask
         }
 
     @staticmethod
