@@ -175,13 +175,12 @@ def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
 @click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.argument('embeddings_file', type=click.File('rb'), default='data/xnli_el/xnli_ft.pkl')
-@click.option('--batch-size', type=int, default=128)
+@click.option('--batch-size', type=int, default=64)
 @click.option('--lr', type=float, default=0.001)
-@click.option('--dp', type=float, default=0.2)
-@click.option('--rnn-hs', type=int, default=128)
+@click.option('--dp', type=float, default=0.3)
 @click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
-def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file, batch_size, lr, dp, rnn_hs,
+def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file, batch_size, lr, dp,
         grad_accumulation_steps, multi_gpu):
     from .dam.system_wrapper import XNLIDAMSystemWrapper
 
@@ -190,9 +189,7 @@ def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file
     sw = XNLIDAMSystemWrapper(
         embeddings,
         w2i, {
-            'rnn_dp': dp,
-            'mlp_dp': dp,
-            'rnn_hidden_size': rnn_hs,
+            'mlp_dp': dp
         })
 
     sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)

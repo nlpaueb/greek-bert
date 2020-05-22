@@ -133,7 +133,7 @@ class XNLIDAMSystemWrapper:
                 run_on_multi_gpus
             )
 
-            current_results = current_system_wrapper._evaluate_impl(val_dataset, batch_size, run_on_multi_gpus)
+            current_results = current_system_wrapper._evaluate_impl(val_dataset, bs, run_on_multi_gpus)
             results.append([current_results['macro-f1'].score, (lr, bs, dp)])
 
         return results
