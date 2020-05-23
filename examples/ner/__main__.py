@@ -128,7 +128,7 @@ def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_pa
 
 
 @rnn.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/ner/silvet_train.txt')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/ner/silver_train.txt')
 @click.argument('char_vocab_save_path', type=str, default='data/ner/char_voc.pkl')
 def create_char_vocab(train_dataset_file, char_vocab_save_path):
 
