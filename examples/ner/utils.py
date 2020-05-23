@@ -6,9 +6,9 @@ def parse_ner_dataset_file(f):
             yield tokens
             tokens.clear()
             continue
-        if len(l_split) != 2:
+        if len(l_split) < 2:
             continue  # todo: fix this
         else:
-            tokens.append({'text': l_split[0], 'label': l_split[1]})
+            tokens.append({'text': l_split[0], 'label': l_split[-1]})
     if tokens:
         yield tokens

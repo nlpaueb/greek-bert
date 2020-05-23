@@ -97,7 +97,19 @@ class NERRNNSystemWrapper:
         evals = {
             'macro-prec': evaluators.MultiClassPrecisionEvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L),
             'macro-rec': evaluators.MultiClassRecallEvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L),
-            'macro-f1': evaluators.MultiClassF1EvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L)
+            'macro-f1': evaluators.MultiClassF1EvaluatorMaskedTokenEntityLabelingEvaluator(eval_dataset.I2L),
+            'micro-prec': evaluators.MultiClassPrecisionEvaluatorMaskedTokenEntityLabelingEvaluator(
+                eval_dataset.I2L,
+                average='micro'
+            ),
+            'micro-rec': evaluators.MultiClassRecallEvaluatorMaskedTokenEntityLabelingEvaluator(
+                eval_dataset.I2L,
+                average='micro'
+            ),
+            'micro-f1': evaluators.MultiClassF1EvaluatorMaskedTokenEntityLabelingEvaluator(
+                eval_dataset.I2L,
+                average='micro'
+            )
         }
 
         if run_on_multi_gpus:
