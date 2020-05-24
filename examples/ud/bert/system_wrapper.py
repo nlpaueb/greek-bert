@@ -108,6 +108,15 @@ class UDBERTSystemWrapper:
             ),
             'macro-f1': evaluators.MaskedTokenLabelingEvaluatorWrapper(
                 pw.evaluators.MultiClassF1Evaluator(average='macro')
+            ),
+            'micro-prec': evaluators.MaskedTokenLabelingEvaluatorWrapper(
+                pw.evaluators.MultiClassPrecisionEvaluator(average='micro')
+            ),
+            'micro-rec': evaluators.MaskedTokenLabelingEvaluatorWrapper(
+                pw.evaluators.MultiClassRecallEvaluator(average='micro')
+            ),
+            'micro-f1': evaluators.MaskedTokenLabelingEvaluatorWrapper(
+                pw.evaluators.MultiClassF1Evaluator(average='micro')
             )
         }
 

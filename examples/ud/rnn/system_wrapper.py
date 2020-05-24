@@ -113,6 +113,18 @@ class UDRNNSystemWrapper:
             'macro-f1': pw.evaluators.TokenLabelingEvaluatorWrapper(
                 pw.evaluators.MultiClassF1Evaluator(average='macro'),
                 4
+            ),
+            'micro-prec': pw.evaluators.TokenLabelingEvaluatorWrapper(
+                pw.evaluators.MultiClassPrecisionEvaluator(average='micro'),
+                4
+            ),
+            'micro-rec': pw.evaluators.TokenLabelingEvaluatorWrapper(
+                pw.evaluators.MultiClassRecallEvaluator(average='micro'),
+                4
+            ),
+            'micro-f1': pw.evaluators.TokenLabelingEvaluatorWrapper(
+                pw.evaluators.MultiClassF1Evaluator(average='micro'),
+                4
             )
         }
 
