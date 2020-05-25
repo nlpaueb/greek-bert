@@ -23,11 +23,27 @@ class XNLIDAMSystemWrapper:
         else:
             self._system = pw.System(model, last_activation=nn.Softmax(dim=-1), device=torch.device('cpu'))
 
-    def train(self, train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus):
-        torch.manual_seed(0)
+    def train(self,
+              train_dataset_file,
+              val_dataset_file,
+              lr,
+              batch_size,
+              grad_accumulation_steps,
+              run_on_multi_gpus,
+              verbose=True,
+              seed=0):
+        torch.manual_seed(seed)
         train_dataset = XNLIDAMDataset(train_dataset_file, self._w2i)
         val_dataset = XNLIDAMDataset(val_dataset_file, self._w2i)
-        self._train_impl(train_dataset, val_dataset, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus)
+        self._train_impl(
+            train_dataset,
+            val_dataset,
+            lr,
+            batch_size,
+            grad_accumulation_steps,
+            run_on_multi_gpus,
+            verbose
+        )
 
     def _train_impl(self,
                     train_dataset,
@@ -35,7 +51,8 @@ class XNLIDAMSystemWrapper:
                     lr,
                     batch_size,
                     grad_accumulation_steps,
-                    run_on_multi_gpus):
+                    run_on_multi_gpus,
+                    verbose=True):
 
         train_dataloader = DataLoader(
             train_dataset,
@@ -73,14 +90,15 @@ class XNLIDAMSystemWrapper:
                     evaluator_key='macro-f1',
                     tmp_best_state_filepath=f'{base_es_path}/temp.es.weights'
                 )
-            ]
+            ],
+            verbose=verbose
         )
 
-    def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus):
+    def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus, verbose=True):
         eval_dataset = XNLIDAMDataset(eval_dataset_file, self._w2i)
-        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus)
+        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, verbose)
 
-    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus):
+    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, verbose=True):
 
         eval_dataloader = DataLoader(
             eval_dataset,
@@ -101,9 +119,9 @@ class XNLIDAMSystemWrapper:
         }
 
         if run_on_multi_gpus:
-            return self._system.evaluate_on_multi_gpus(eval_dataloader, evaluators)
+            return self._system.evaluate_on_multi_gpus(eval_dataloader, evaluators, verbose)
         else:
-            return self._system.evaluate(eval_dataloader, evaluators)
+            return self._system.evaluate(eval_dataloader, evaluators, verbose)
 
     @staticmethod
     def tune(embeddings, w2i, train_dataset_file, val_dataset_file, run_on_multi_gpus):

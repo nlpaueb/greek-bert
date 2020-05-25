@@ -54,14 +54,16 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 @click.option('--dp', type=float, default=0.2)
 @click.option('--grad-accumulation-steps', type=int, default=4)
 @click.option('--multi-gpu', is_flag=True)
+@click.option('--silent', is_flag=True)
+@click.option('--seed', type=int, default=0)
 def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
-        multi_gpu):
+        multi_gpu, silent, seed):
     from .bert.system_wrapper import XNLIBERTSystemWrapper
 
     sw = XNLIBERTSystemWrapper('bert-base-multilingual-uncased', {'dp': dp})
 
-    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
-    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
+    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
+    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
     click.echo(results)
 
@@ -95,16 +97,16 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 @click.option('--batch-size', type=int, default=8)
 @click.option('--lr', type=float, default=3e-05)
 @click.option('--dp', type=float, default=0.2)
-@click.option('--grad-accumulation-steps', type=int, default=4)
-@click.option('--multi-gpu', is_flag=True)
+@click.option('--silent', is_flag=True)
+@click.option('--seed', type=int, default=0)
 def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
-        multi_gpu):
+        multi_gpu, silent, seed):
     from .bert.system_wrapper import XNLIBERTSystemWrapper
 
     sw = XNLIBERTSystemWrapper('nlpaueb/bert-base-greek-uncased-v1', {'dp': dp})
 
-    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
-    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
+    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
+    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
     click.echo(results)
 
@@ -180,8 +182,10 @@ def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
 @click.option('--dp', type=float, default=0.3)
 @click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
+@click.option('--silent', is_flag=True)
+@click.option('--seed', type=int, default=0)
 def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file, batch_size, lr, dp,
-        grad_accumulation_steps, multi_gpu):
+        grad_accumulation_steps, multi_gpu, silent, seed):
     from .dam.system_wrapper import XNLIDAMSystemWrapper
 
     embeddings, w2i, _ = pickle.load(embeddings_file)
@@ -192,8 +196,8 @@ def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file
             'mlp_dp': dp
         })
 
-    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu)
-    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu)
+    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
+    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
     click.echo(results)
 

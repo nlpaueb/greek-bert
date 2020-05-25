@@ -25,12 +25,28 @@ class XNLIBERTSystemWrapper:
         else:
             self._system = pw.System(model, last_activation=nn.Softmax(dim=-1), device=torch.device('cpu'))
 
-    def train(self, train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus):
-        torch.manual_seed(0)
+    def train(self,
+              train_dataset_file,
+              val_dataset_file,
+              lr,
+              batch_size,
+              grad_accumulation_steps,
+              run_on_multi_gpus,
+              verbose=True,
+              seed=0):
+        torch.manual_seed(seed)
         tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
         train_dataset = XNLIBERTDataset(train_dataset_file, tokenizer)
         val_dataset = XNLIBERTDataset(val_dataset_file, tokenizer)
-        self._train_impl(train_dataset, val_dataset, lr, batch_size, grad_accumulation_steps, run_on_multi_gpus)
+        self._train_impl(
+            train_dataset,
+            val_dataset,
+            lr,
+            batch_size,
+            grad_accumulation_steps,
+            run_on_multi_gpus,
+            verbose
+        )
 
     def _train_impl(self,
                     train_dataset,
@@ -38,7 +54,8 @@ class XNLIBERTSystemWrapper:
                     lr,
                     batch_size,
                     grad_accumulation_steps,
-                    run_on_multi_gpus):
+                    run_on_multi_gpus,
+                    verbose=True):
 
         train_dataloader = DataLoader(
             train_dataset,
@@ -76,15 +93,16 @@ class XNLIBERTSystemWrapper:
                     evaluator_key='macro-f1',
                     tmp_best_state_filepath=f'{base_es_path}/temp.es.weights'
                 )
-            ]
+            ],
+            verbose=verbose
         )
 
-    def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus):
+    def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus, verbose=True):
         tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
         eval_dataset = XNLIBERTDataset(eval_dataset_file, tokenizer)
-        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus)
+        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, verbose)
 
-    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus):
+    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, verbose=True):
 
         eval_dataloader = DataLoader(
             eval_dataset,
@@ -105,9 +123,9 @@ class XNLIBERTSystemWrapper:
         }
 
         if run_on_multi_gpus:
-            return self._system.evaluate_on_multi_gpus(eval_dataloader, evaluators)
+            return self._system.evaluate_on_multi_gpus(eval_dataloader, evaluators, verbose=verbose)
         else:
-            return self._system.evaluate(eval_dataloader, evaluators)
+            return self._system.evaluate(eval_dataloader, evaluators, verbose=verbose)
 
     @staticmethod
     def tune(pretrained_bert_name, train_dataset_file, val_dataset_file, run_on_multi_gpus):
