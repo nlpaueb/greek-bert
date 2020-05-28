@@ -31,7 +31,7 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
         multi_gpu
     )
 
-    click.echo(max(results, key=lambda x: x[0]))
+    print(max(results, key=lambda x: x[0]))
 
 
 @multi_bert.command()
@@ -52,7 +52,7 @@ def run(train_dataset_file, dev_dataset_file, test_dataset_file, batch_size, lr,
     sw.train(train_dataset_file, dev_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
-    click.echo(results)
+    print(results)
 
 
 @ner.group()
@@ -72,7 +72,7 @@ def tune(train_dataset_file, dev_dataset_file, multi_gpu):
         multi_gpu
     )
 
-    click.echo(max(results, key=lambda x: x[0]))
+    print(max(results, key=lambda x: x[0]))
 
 
 @greek_bert.command()
@@ -93,7 +93,7 @@ def run(train_dataset_file, dev_dataset_file, test_dataset_file, batch_size, lr,
     sw.train(train_dataset_file, dev_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
-    click.echo(results)
+    print(results)
 
 
 @ner.group()
@@ -169,7 +169,7 @@ def tune(train_dataset_file, dev_dataset_file, embeddings_file, char_vocab_file,
         multi_gpu
     )
 
-    click.echo(max(results, key=lambda x: x[0]))
+    print(max(results, key=lambda x: x[0]))
 
 
 @rnn.command()
@@ -207,7 +207,7 @@ def run(train_dataset_file, dev_dataset_file, test_dataset_file, embeddings_file
     sw.train(train_dataset_file, dev_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
-    click.echo(results)
+    print(results)
 
 
 if __name__ == '__main__':

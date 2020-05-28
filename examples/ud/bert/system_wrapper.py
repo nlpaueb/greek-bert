@@ -139,9 +139,9 @@ class UDBERTSystemWrapper:
         }
 
         if run_on_multi_gpus:
-            return self._system.evaluate_on_multi_gpus(eval_dataloader, evals, verbose)
+            return self._system.evaluate_on_multi_gpus(eval_dataloader, evals, verbose=verbose)
         else:
-            return self._system.evaluate(eval_dataloader, evals, verbose)
+            return self._system.evaluate(eval_dataloader, evals, verbose=verbose)
 
     @staticmethod
     def tune(pretrained_bert_name, train_dataset_file, val_dataset_file, run_on_multi_gpus):
