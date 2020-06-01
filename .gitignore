@@ -117,3 +117,4 @@ dmypy.json
 .DS_STORE
 
 tmp/
+dummy_scripts/

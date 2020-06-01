@@ -7,6 +7,7 @@ from torch import nn
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from itertools import product
 from transformers import AutoTokenizer, AutoModel, AdamW
+from functools import partial
 
 from ...utils import loss_wrappers, evaluators
 from .model import NERBERTModel
@@ -15,11 +16,13 @@ from .dataset import NERBERTDataset
 
 class NERBERTSystemWrapper:
 
-    def __init__(self, pretrained_bert_name, model_params):
+    def __init__(self, pretrained_bert_name, preprocessing_function, bert_like_special_tokens, model_params):
 
         self._pretrained_bert_name = pretrained_bert_name
         bert_model = AutoModel.from_pretrained(pretrained_bert_name)
         model = NERBERTModel(bert_model, **model_params)
+        self._preprocessing_function = preprocessing_function
+        self._bert_like_special_tokens = bert_like_special_tokens
 
         if torch.cuda.is_available():
             self._system = pw.System(model, last_activation=nn.Softmax(dim=-1), device=torch.device('cuda'))
@@ -37,8 +40,21 @@ class NERBERTSystemWrapper:
               seed=0):
         torch.manual_seed(seed)
         tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
-        train_dataset = NERBERTDataset(train_dataset_file, tokenizer)
-        val_dataset = NERBERTDataset(val_dataset_file, tokenizer)
+
+        train_dataset = NERBERTDataset(
+            train_dataset_file,
+            tokenizer,
+            self._bert_like_special_tokens,
+            self._preprocessing_function
+        )
+
+        val_dataset = NERBERTDataset(
+            val_dataset_file,
+            tokenizer,
+            self._bert_like_special_tokens,
+            self._preprocessing_function
+        )
+
         self._train_impl(
             train_dataset,
             val_dataset,
@@ -46,6 +62,7 @@ class NERBERTSystemWrapper:
             batch_size,
             grad_accumulation_steps,
             run_on_multi_gpus,
+            tokenizer.pad_token_id,
             verbose
         )
 
@@ -56,20 +73,21 @@ class NERBERTSystemWrapper:
                     batch_size,
                     grad_accumulation_steps,
                     run_on_multi_gpus,
+                    pad_value,
                     verbose=True):
 
         train_dataloader = DataLoader(
             train_dataset,
             sampler=RandomSampler(train_dataset),
             batch_size=batch_size,
-            collate_fn=NERBERTDataset.collate_fn
+            collate_fn=partial(NERBERTDataset.collate_fn, pad_value=pad_value)
         )
 
         val_dataloader = DataLoader(
             val_dataset,
             sampler=SequentialSampler(val_dataset),
             batch_size=batch_size,
-            collate_fn=NERBERTDataset.collate_fn
+            collate_fn=partial(NERBERTDataset.collate_fn, pad_value=pad_value)
         )
 
         loss_wrapper = loss_wrappers.MaskedTokenLabelingGenericPointWiseLossWrapper(nn.CrossEntropyLoss())
@@ -102,16 +120,21 @@ class NERBERTSystemWrapper:
 
     def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus, verbose=True):
         tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
-        eval_dataset = NERBERTDataset(eval_dataset_file, tokenizer)
-        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, verbose)
+        eval_dataset = NERBERTDataset(
+            eval_dataset_file,
+            tokenizer,
+            self._bert_like_special_tokens,
+            self._preprocessing_function
+        )
+        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, tokenizer.pad_token_id, verbose)
 
-    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, verbose=True):
+    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, pad_value, verbose=True):
 
         eval_dataloader = DataLoader(
             eval_dataset,
             sampler=SequentialSampler(eval_dataset),
             batch_size=batch_size,
-            collate_fn=NERBERTDataset.collate_fn
+            collate_fn=partial(NERBERTDataset.collate_fn, pad_value=pad_value)
         )
 
         evals = {
@@ -138,33 +161,61 @@ class NERBERTSystemWrapper:
             return self._system.evaluate(eval_dataloader, evals, verbose=verbose)
 
     @staticmethod
-    def tune(pretrained_bert_name, train_dataset_file, val_dataset_file, run_on_multi_gpus):
+    def tune(pretrained_bert_name,
+             preprocessing_function,
+             bert_like_special_tokens,
+             train_dataset_file,
+             val_dataset_file,
+             run_on_multi_gpus):
         lrs = [5e-5, 3e-5, 2e-5]
         dp = [0, 0.1, 0.2]
-        grad_accumulation_steps = [2, 4]
-        batch_size = 8
+        grad_accumulation_steps = [4, 8]
+        batch_size = 4
         params = list(product(lrs, dp, grad_accumulation_steps))
 
         tokenizer = AutoTokenizer.from_pretrained(pretrained_bert_name)
 
-        train_dataset = NERBERTDataset(train_dataset_file, tokenizer)
-        val_dataset = NERBERTDataset(val_dataset_file, tokenizer)
+        train_dataset = NERBERTDataset(
+            train_dataset_file,
+            tokenizer,
+            bert_like_special_tokens,
+            preprocessing_function
+        )
+
+        val_dataset = NERBERTDataset(
+            val_dataset_file,
+            tokenizer,
+            bert_like_special_tokens,
+            preprocessing_function
+        )
 
         results = []
         for i, (lr, dp, grad_accumulation_steps) in enumerate(params):
             print(f'{i + 1}/{len(params)}')
             torch.manual_seed(0)
-            current_system_wrapper = NERBERTSystemWrapper(pretrained_bert_name, {'dp': dp})
+            current_system_wrapper = NERBERTSystemWrapper(
+                pretrained_bert_name,
+                preprocessing_function,
+                bert_like_special_tokens,
+                {'dp': dp}
+            )
+
             current_system_wrapper._train_impl(
                 train_dataset,
                 val_dataset,
                 lr,
                 batch_size,
                 grad_accumulation_steps,
+                tokenizer.pad_token_id,
                 run_on_multi_gpus
             )
 
-            current_results = current_system_wrapper._evaluate_impl(val_dataset, batch_size, run_on_multi_gpus)
+            current_results = current_system_wrapper._evaluate_impl(
+                val_dataset,
+                batch_size,
+                run_on_multi_gpus,
+                tokenizer.pad_token_id
+            )
             results.append([current_results['macro-f1'].score, (lr, dp, grad_accumulation_steps)])
 
         return results
