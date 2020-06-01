@@ -132,8 +132,8 @@ def cased_multi_bert():
 
 
 @cased_multi_bert.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/ner/train.txt')
-@click.argument('dev_dataset_file', type=click.File('r'), default='data/ner/dev.txt')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/ud/train.conllu')
+@click.argument('dev_dataset_file', type=click.File('r'), default='data/ud/dev.conllu')
 @click.option('--multi-gpu', is_flag=True)
 def tune(train_dataset_file, dev_dataset_file, multi_gpu):
     results = UDBERTSystemWrapper.tune(
@@ -149,9 +149,9 @@ def tune(train_dataset_file, dev_dataset_file, multi_gpu):
 
 
 @cased_multi_bert.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/ner/train.txt')
-@click.argument('dev_dataset_file', type=click.File('r'), default='data/ner/dev.txt')
-@click.argument('test_dataset_file', type=click.File('r'), default='data/ner/test.txt')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/ud/train.conllu')
+@click.argument('dev_dataset_file', type=click.File('r'), default='data/ud/dev.conllu')
+@click.argument('test_dataset_file', type=click.File('r'), default='data/ud/test.conllu')
 @click.option('--batch-size', type=int, default=4)
 @click.option('--lr', type=float, default=2e-05)
 @click.option('--dp', type=float, default=0)
@@ -180,8 +180,8 @@ def xlm_r():
 
 
 @xlm_r.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/ner/train.txt')
-@click.argument('dev_dataset_file', type=click.File('r'), default='data/ner/dev.txt')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/ud/train.conllu')
+@click.argument('dev_dataset_file', type=click.File('r'), default='data/ud/dev.conllu')
 @click.option('--multi-gpu', is_flag=True)
 def tune(train_dataset_file, dev_dataset_file, multi_gpu):
     results = UDBERTSystemWrapper.tune(
@@ -197,9 +197,9 @@ def tune(train_dataset_file, dev_dataset_file, multi_gpu):
 
 
 @xlm_r.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/ner/train.txt')
-@click.argument('dev_dataset_file', type=click.File('r'), default='data/ner/dev.txt')
-@click.argument('test_dataset_file', type=click.File('r'), default='data/ner/test.txt')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/ud/train.conllu')
+@click.argument('dev_dataset_file', type=click.File('r'), default='data/ud/dev.conllu')
+@click.argument('test_dataset_file', type=click.File('r'), default='data/ud/test.conllu')
 @click.option('--batch-size', type=int, default=4)
 @click.option('--lr', type=float, default=2e-05)
 @click.option('--dp', type=float, default=0)
