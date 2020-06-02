@@ -4,7 +4,6 @@ import json
 from tqdm.auto import tqdm
 from torch.utils.data import Dataset
 
-from ...utils.text import strip_accents_and_lowercase
 from ...utils.sequences import pad_to_max
 
 
@@ -12,10 +11,11 @@ class XNLIBERTDataset(Dataset):
     L2I = {
         'neutral': 0,
         'contradiction': 1,
+        'contradictory': 1,
         'entailment': 2
     }
 
-    def __init__(self, file, tokenizer):
+    def __init__(self, file, tokenizer, preprocessing_function):
         self.ids = []
         self.texts = []
         self.texts_len = []
@@ -25,7 +25,8 @@ class XNLIBERTDataset(Dataset):
             ex = json.loads(l)
             cur_text, cur_len = self.process_example(
                 ex,
-                tokenizer
+                tokenizer,
+                preprocessing_function
             )
             self.texts.append(cur_text)
             self.texts_len.append(cur_len)
@@ -62,10 +63,10 @@ class XNLIBERTDataset(Dataset):
         return batch
 
     @staticmethod
-    def process_example(ex, tokenizer):
+    def process_example(ex, tokenizer, preprocessing_function):
         tokens = tokenizer.encode(
-            strip_accents_and_lowercase(ex['prem']),
-            text_pair=strip_accents_and_lowercase(ex['hypo']),
+            preprocessing_function(ex['prem']) if preprocessing_function else ex['prem'],
+            text_pair=preprocessing_function(ex['hypo']) if preprocessing_function else ex['hypo'],
             add_special_tokens=True,
             max_length=512
         )

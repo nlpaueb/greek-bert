@@ -32,12 +32,13 @@ class XNLIBERTSystemWrapper:
               batch_size,
               grad_accumulation_steps,
               run_on_multi_gpus,
+              preprocessing_function,
               verbose=True,
               seed=0):
         torch.manual_seed(seed)
         tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
-        train_dataset = XNLIBERTDataset(train_dataset_file, tokenizer)
-        val_dataset = XNLIBERTDataset(val_dataset_file, tokenizer)
+        train_dataset = XNLIBERTDataset(train_dataset_file, tokenizer, preprocessing_function)
+        val_dataset = XNLIBERTDataset(val_dataset_file, tokenizer, preprocessing_function)
         self._train_impl(
             train_dataset,
             val_dataset,
@@ -97,9 +98,9 @@ class XNLIBERTSystemWrapper:
             verbose=verbose
         )
 
-    def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus, verbose=True):
+    def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus, preprocessing_function, verbose=True):
         tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
-        eval_dataset = XNLIBERTDataset(eval_dataset_file, tokenizer)
+        eval_dataset = XNLIBERTDataset(eval_dataset_file, tokenizer, preprocessing_function)
         return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, verbose)
 
     def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, verbose=True):
@@ -128,17 +129,17 @@ class XNLIBERTSystemWrapper:
             return self._system.evaluate(eval_dataloader, evaluators, verbose=verbose)
 
     @staticmethod
-    def tune(pretrained_bert_name, train_dataset_file, val_dataset_file, run_on_multi_gpus):
+    def tune(pretrained_bert_name, train_dataset_file, val_dataset_file, run_on_multi_gpus, preprocessing_function):
         lrs = [5e-5, 3e-5, 2e-5]
         dp = [0, 0.1, 0.2]
-        grad_accumulation_steps = [2, 4]
-        batch_size = 8
+        grad_accumulation_steps = [4, 8]
+        batch_size = 4
         params = list(product(lrs, dp, grad_accumulation_steps))
 
         tokenizer = AutoTokenizer.from_pretrained(pretrained_bert_name)
 
-        train_dataset = XNLIBERTDataset(train_dataset_file, tokenizer)
-        val_dataset = XNLIBERTDataset(val_dataset_file, tokenizer)
+        train_dataset = XNLIBERTDataset(train_dataset_file, tokenizer, preprocessing_function)
+        val_dataset = XNLIBERTDataset(val_dataset_file, tokenizer, preprocessing_function)
 
         results = []
         for i, (lr, dp, grad_accumulation_steps) in enumerate(params):

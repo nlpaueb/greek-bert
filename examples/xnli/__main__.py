@@ -7,6 +7,8 @@ import pickle
 
 from zipfile import ZipFile
 
+from ..utils.text import strip_accents_and_lowercase
+
 
 @click.group()
 def xnli():
@@ -29,8 +31,8 @@ def multi_bert():
 
 
 @multi_bert.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
-@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train40K.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.option('--multi-gpu', is_flag=True)
 def tune(train_dataset_file, val_dataset_file, multi_gpu):
     from .bert.system_wrapper import XNLIBERTSystemWrapper
@@ -39,6 +41,7 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
         'bert-base-multilingual-uncased',
         train_dataset_file,
         val_dataset_file,
+        strip_accents_and_lowercase,
         multi_gpu
     )
 
@@ -47,7 +50,7 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 
 @multi_bert.command()
 @click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
-@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.option('--batch-size', type=int, default=8)
 @click.option('--lr', type=float, default=2e-05)
@@ -62,8 +65,10 @@ def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr,
 
     sw = XNLIBERTSystemWrapper('bert-base-multilingual-uncased', {'dp': dp})
 
-    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
-    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
+    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu,
+             strip_accents_and_lowercase, not silent, seed)
+    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu,
+                          strip_accents_and_lowercase, not silent)
 
     print(results)
 
@@ -74,8 +79,8 @@ def greek_bert():
 
 
 @greek_bert.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
-@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train40K.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.option('--multi-gpu', is_flag=True)
 def tune(train_dataset_file, val_dataset_file, multi_gpu):
     from .bert.system_wrapper import XNLIBERTSystemWrapper
@@ -84,7 +89,8 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
         'nlpaueb/bert-base-greek-uncased-v1',
         train_dataset_file,
         val_dataset_file,
-        multi_gpu
+        multi_gpu,
+        strip_accents_and_lowercase
     )
 
     print(max(results, key=lambda x: x[0]))
@@ -92,7 +98,7 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 
 @greek_bert.command()
 @click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
-@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.option('--batch-size', type=int, default=8)
 @click.option('--lr', type=float, default=3e-05)
@@ -107,8 +113,10 @@ def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr,
 
     sw = XNLIBERTSystemWrapper('nlpaueb/bert-base-greek-uncased-v1', {'dp': dp})
 
-    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu, not silent, seed)
-    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
+    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu,
+             strip_accents_and_lowercase, not silent, seed)
+    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu,
+                          strip_accents_and_lowercase, not silent)
 
     print(results)
 
@@ -128,7 +136,7 @@ def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_pa
 
     # todo: add big train
     if not dataset_file_paths:
-        dataset_file_paths = [f'data/xnli_el/xnli.el.{ds}.jsonl' for ds in ('train', 'val', 'test')]
+        dataset_file_paths = [f'data/xnli_el/xnli.el.{ds}.jsonl' for ds in ('train', 'dev', 'test')]
 
     download_model('el', tmp_download_path, if_exists='ignore')
     ft = fasttext.load_model(f'{tmp_download_path}/cc.el.300.bin')
@@ -154,8 +162,8 @@ def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_pa
 
 
 @dam.command()
-@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
-@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train40K.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('embeddings_file', type=click.File('rb'), default='data/xnli_el/xnli_ft.pkl')
 @click.option('--multi-gpu', is_flag=True)
 def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
@@ -176,7 +184,7 @@ def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
 
 @dam.command()
 @click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
-@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.val.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.argument('embeddings_file', type=click.File('rb'), default='data/xnli_el/xnli_ft.pkl')
 @click.option('--batch-size', type=int, default=64)
