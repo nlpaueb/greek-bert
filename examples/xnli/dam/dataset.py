@@ -14,6 +14,7 @@ class XNLIDAMDataset(Dataset):
     L2I = {
         'neutral': 0,
         'contradiction': 1,
+        'contradictory': 1,
         'entailment': 2
     }
 
