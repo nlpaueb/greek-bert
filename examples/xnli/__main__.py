@@ -52,10 +52,10 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 @click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
 @click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
-@click.option('--batch-size', type=int, default=8)
-@click.option('--lr', type=float, default=2e-05)
-@click.option('--dp', type=float, default=0.2)
-@click.option('--grad-accumulation-steps', type=int, default=4)
+@click.option('--batch-size', type=int, default=4)
+@click.option('--lr', type=float, default=3e-05)
+@click.option('--dp', type=float, default=0.1)
+@click.option('--grad-accumulation-steps', type=int, default=8)
 @click.option('--multi-gpu', is_flag=True)
 @click.option('--silent', is_flag=True)
 @click.option('--seed', type=int, default=0)
@@ -169,6 +169,54 @@ def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr,
 
 
 @xnli.group()
+def xlm_r():
+    pass
+
+
+@xlm_r.command()
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train40K.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
+@click.option('--multi-gpu', is_flag=True)
+def tune(train_dataset_file, val_dataset_file, multi_gpu):
+    from .bert.system_wrapper import XNLIBERTSystemWrapper
+
+    results = XNLIBERTSystemWrapper.tune(
+        'xlm-roberta-base',
+        train_dataset_file,
+        val_dataset_file,
+        multi_gpu,
+        strip_accents_and_lowercase
+    )
+
+    print(max(results, key=lambda x: x[0]))
+
+
+@xlm_r.command()
+@click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
+@click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
+@click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
+@click.option('--batch-size', type=int, default=8)
+@click.option('--lr', type=float, default=3e-05)
+@click.option('--dp', type=float, default=0.2)
+@click.option('--grad-accumulation-steps', type=int, default=4)
+@click.option('--multi-gpu', is_flag=True)
+@click.option('--silent', is_flag=True)
+@click.option('--seed', type=int, default=0)
+def run(train_dataset_file, val_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
+        multi_gpu, silent, seed):
+    from .bert.system_wrapper import XNLIBERTSystemWrapper
+
+    sw = XNLIBERTSystemWrapper('xlm-roberta-base', {'dp': dp})
+
+    sw.train(train_dataset_file, val_dataset_file, lr, batch_size, grad_accumulation_steps, multi_gpu,
+             strip_accents_and_lowercase, not silent, seed)
+    results = sw.evaluate(test_dataset_file, batch_size, multi_gpu,
+                          strip_accents_and_lowercase, not silent)
+
+    print(results)
+
+
+@xnli.group()
 def dam():
     pass
 
@@ -236,7 +284,7 @@ def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
 @click.argument('embeddings_file', type=click.File('rb'), default='data/xnli_el/xnli_ft.pkl')
 @click.option('--batch-size', type=int, default=64)
 @click.option('--lr', type=float, default=0.001)
-@click.option('--dp', type=float, default=0.3)
+@click.option('--dp', type=float, default=0.2)
 @click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
 @click.option('--silent', is_flag=True)
