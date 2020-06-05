@@ -100,7 +100,7 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 @click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
 @click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
-@click.option('--batch-size', type=int, default=8)
+@click.option('--batch-size', type=int, default=4)
 @click.option('--lr', type=float, default=2e-05)
 @click.option('--dp', type=float, default=0.1)
 @click.option('--grad-accumulation-steps', type=int, default=4)
@@ -195,7 +195,7 @@ def tune(train_dataset_file, val_dataset_file, multi_gpu):
 @click.argument('train_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.train.jsonl')
 @click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
-@click.option('--batch-size', type=int, default=8)
+@click.option('--batch-size', type=int, default=4)
 @click.option('--lr', type=float, default=2e-05)
 @click.option('--dp', type=float, default=0.1)
 @click.option('--grad-accumulation-steps', type=int, default=4)
@@ -229,7 +229,6 @@ def download_embeddings(tmp_download_path, embeddings_save_path, dataset_file_pa
     from ..utils.fasttext_downloader import download_model
     from .dam.dataset import XNLIDAMDataset
 
-    # todo: add big train
     if not dataset_file_paths:
         dataset_file_paths = [f'data/xnli_el/xnli.el.{ds}.jsonl' for ds in ('train', 'dev', 'test')]
 
