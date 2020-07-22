@@ -129,7 +129,7 @@ class XNLIBERTSystemWrapper:
             return self._system.evaluate(eval_dataloader, evaluators, verbose=verbose)
 
     def save_model_state(self, path):
-        self.save_model_state(path)
+        self._system.save_model_state(path)
 
     @staticmethod
     def tune(pretrained_bert_name, train_dataset_file, val_dataset_file, run_on_multi_gpus, preprocessing_function):
