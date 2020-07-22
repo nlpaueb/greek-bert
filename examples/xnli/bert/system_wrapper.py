@@ -7,6 +7,7 @@ from torch import nn
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from itertools import product
 from transformers import AutoTokenizer, AutoModel, AdamW
+from functools import partial
 
 from .model import XNLIBERTModel
 from .dataset import XNLIBERTDataset
@@ -46,6 +47,7 @@ class XNLIBERTSystemWrapper:
             batch_size,
             grad_accumulation_steps,
             run_on_multi_gpus,
+            tokenizer.pad_token_id,
             verbose
         )
 
@@ -56,20 +58,21 @@ class XNLIBERTSystemWrapper:
                     batch_size,
                     grad_accumulation_steps,
                     run_on_multi_gpus,
+                    pad_value,
                     verbose=True):
 
         train_dataloader = DataLoader(
             train_dataset,
             sampler=RandomSampler(train_dataset),
             batch_size=batch_size,
-            collate_fn=XNLIBERTDataset.collate_fn
+            collate_fn=partial(XNLIBERTDataset.collate_fn, pad_value=pad_value)
         )
 
         val_dataloader = DataLoader(
             val_dataset,
             sampler=SequentialSampler(val_dataset),
             batch_size=batch_size,
-            collate_fn=XNLIBERTDataset.collate_fn
+            collate_fn=partial(XNLIBERTDataset.collate_fn, pad_value=pad_value)
         )
 
         loss_wrapper = pw.loss_wrappers.GenericPointWiseLossWrapper(nn.CrossEntropyLoss())
@@ -101,15 +104,15 @@ class XNLIBERTSystemWrapper:
     def evaluate(self, eval_dataset_file, batch_size, run_on_multi_gpus, preprocessing_function, verbose=True):
         tokenizer = AutoTokenizer.from_pretrained(self._pretrained_bert_name)
         eval_dataset = XNLIBERTDataset(eval_dataset_file, tokenizer, preprocessing_function)
-        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, verbose)
+        return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, tokenizer.pad_token_id, verbose)
 
-    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, verbose=True):
+    def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, pad_value, verbose=True):
 
         eval_dataloader = DataLoader(
             eval_dataset,
             sampler=SequentialSampler(eval_dataset),
             batch_size=batch_size,
-            collate_fn=XNLIBERTDataset.collate_fn
+            collate_fn=partial(XNLIBERTDataset.collate_fn, pad_value=pad_value)
         )
 
         evaluators = {

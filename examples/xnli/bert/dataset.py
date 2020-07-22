@@ -44,12 +44,12 @@ class XNLIBERTDataset(Dataset):
         return len(self.ids)
 
     @staticmethod
-    def collate_fn(batch):
+    def collate_fn(batch, pad_value):
         batch_zipped = list(zip(*batch))
         input_zipped = list(zip(*batch_zipped[1]))
 
         ids = batch_zipped[0]
-        texts = torch.tensor(pad_to_max(input_zipped[0]), dtype=torch.long)
+        texts = torch.tensor(pad_to_max(input_zipped[0], pad_value=pad_value), dtype=torch.long)
         texts_len = torch.tensor(input_zipped[1], dtype=torch.int)
 
         target = torch.tensor(batch_zipped[2], dtype=torch.long)
