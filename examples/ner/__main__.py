@@ -89,15 +89,16 @@ def tune(train_dataset_file, dev_dataset_file, multi_gpu):
 @click.argument('train_dataset_file', type=click.File('r'), default='data/ner/train.txt')
 @click.argument('dev_dataset_file', type=click.File('r'), default='data/ner/dev.txt')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/ner/test.txt')
-@click.option('--batch-size', type=int, default=8)
+@click.option('--model-weights-save-path', type=str, default=None)
+@click.option('--batch-size', type=int, default=16)
 @click.option('--lr', type=float, default=5e-05)
 @click.option('--dp', type=float, default=0.2)
-@click.option('--grad-accumulation-steps', type=int, default=2)
+@click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
 @click.option('--silent', is_flag=True)
 @click.option('--seed', type=int, default=0)
-def run(train_dataset_file, dev_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
-        multi_gpu, silent, seed):
+def run(train_dataset_file, dev_dataset_file, test_dataset_file, model_weights_save_path, batch_size, lr, dp,
+        grad_accumulation_steps, multi_gpu, silent, seed):
     sw = NERBERTSystemWrapper(
         'nlpaueb/bert-base-greek-uncased-v1',
         strip_accents_and_lowercase,
@@ -109,6 +110,8 @@ def run(train_dataset_file, dev_dataset_file, test_dataset_file, batch_size, lr,
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
     print(results)
+    if model_weights_save_path:
+        sw.save_model_state(model_weights_save_path)
 
 
 @ner.group()
@@ -185,15 +188,16 @@ def tune(train_dataset_file, dev_dataset_file, multi_gpu):
 @click.argument('train_dataset_file', type=click.File('r'), default='data/ner/train.txt')
 @click.argument('dev_dataset_file', type=click.File('r'), default='data/ner/dev.txt')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/ner/test.txt')
-@click.option('--batch-size', type=int, default=4)
+@click.option('--model-weights-save-path', type=str, default=None)
+@click.option('--batch-size', type=int, default=16)
 @click.option('--lr', type=float, default=2e-05)
 @click.option('--dp', type=float, default=0)
-@click.option('--grad-accumulation-steps', type=int, default=4)
+@click.option('--grad-accumulation-steps', type=int, default=1)
 @click.option('--multi-gpu', is_flag=True)
 @click.option('--silent', is_flag=True)
 @click.option('--seed', type=int, default=0)
-def run(train_dataset_file, dev_dataset_file, test_dataset_file, batch_size, lr, dp, grad_accumulation_steps,
-        multi_gpu, silent, seed):
+def run(train_dataset_file, dev_dataset_file, test_dataset_file, model_weights_save_path, batch_size, lr, dp,
+        grad_accumulation_steps, multi_gpu, silent, seed):
     sw = NERBERTSystemWrapper(
         'xlm-roberta-base',
         None,
@@ -205,6 +209,8 @@ def run(train_dataset_file, dev_dataset_file, test_dataset_file, batch_size, lr,
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
     print(results)
+    if model_weights_save_path:
+        sw.save_model_state(model_weights_save_path)
 
 
 @ner.group()

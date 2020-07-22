@@ -160,6 +160,9 @@ class NERBERTSystemWrapper:
         else:
             return self._system.evaluate(eval_dataloader, evals, verbose=verbose)
 
+    def save_model_state(self, path):
+        self.save_model_state(path)
+
     @staticmethod
     def tune(pretrained_bert_name,
              preprocessing_function,
