@@ -293,6 +293,7 @@ def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
 @click.argument('val_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.dev.jsonl')
 @click.argument('test_dataset_file', type=click.File('r'), default='data/xnli_el/xnli.el.test.jsonl')
 @click.argument('embeddings_file', type=click.File('rb'), default='data/xnli_el/xnli_ft.pkl')
+@click.option('--model-weights-save-path', type=str, default=None)
 @click.option('--batch-size', type=int, default=64)
 @click.option('--lr', type=float, default=0.001)
 @click.option('--dp', type=float, default=0.2)
@@ -300,8 +301,8 @@ def tune(train_dataset_file, val_dataset_file, embeddings_file, multi_gpu):
 @click.option('--multi-gpu', is_flag=True)
 @click.option('--silent', is_flag=True)
 @click.option('--seed', type=int, default=0)
-def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file, batch_size, lr, dp,
-        grad_accumulation_steps, multi_gpu, silent, seed):
+def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file, model_weights_save_path, batch_size,
+        lr, dp, grad_accumulation_steps, multi_gpu, silent, seed):
     from .dam.system_wrapper import XNLIDAMSystemWrapper
 
     embeddings, w2i, _ = pickle.load(embeddings_file)
@@ -316,6 +317,8 @@ def run(train_dataset_file, val_dataset_file, test_dataset_file, embeddings_file
     results = sw.evaluate(test_dataset_file, batch_size, multi_gpu, not silent)
 
     print(results)
+    if model_weights_save_path:
+        sw.save_model_state(model_weights_save_path)
 
 
 if __name__ == '__main__':
