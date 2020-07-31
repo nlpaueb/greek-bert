@@ -98,6 +98,9 @@ class XNLIDAMSystemWrapper:
         eval_dataset = XNLIDAMDataset(eval_dataset_file, self._w2i)
         return self._evaluate_impl(eval_dataset, batch_size, run_on_multi_gpus, verbose)
 
+    def save_model_state(self, path):
+        self._system.save_model_state(path)
+
     def _evaluate_impl(self, eval_dataset, batch_size, run_on_multi_gpus, verbose=True):
 
         eval_dataloader = DataLoader(
